@@ -35,6 +35,13 @@ GList *ipc_visible_windows()
 
     i3ipcCon *focused = i3ipc_con_find_focused(tree);
     i3ipcCon *ws = i3ipc_con_workspace(focused);
+    if (ws == NULL)
+    {
+        fprintf(stderr, "cannot find workspace of focused window\n");
+        g_object_unref(tree);
+        return NULL;
+    }
+
     GList *cons = i3ipc_con_leaves(ws);
     g_object_unref(tree);
 

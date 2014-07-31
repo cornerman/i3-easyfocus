@@ -1,13 +1,16 @@
-#include "all.h"
+#include "config.h"
+#include "util.h"
 #include "ipc.h"
 #include "xcb.h"
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <glib.h>
 #include <glib-object.h>
 
 #define MIN_CHAR 97
 #define MAX_CHAR 122
-#define DIFF_CHAR MAX_CHAR - MIN_CHAR
+#define DIFF_CHAR MAX_CHAR - MIN_CHAR + 1
 
 typedef struct char_map_t
 {
@@ -15,13 +18,11 @@ typedef struct char_map_t
     char num;
 } char_map;
 
-void create_window_label(gpointer item, gpointer data)
+static void create_window_label(i3ipcCon *con, char_map *curr)
 {
-    i3ipcCon *con = item;
-    char_map *curr = data;
-    if (curr->num > 122)
+    if (curr->num >= DIFF_CHAR)
     {
-        fprintf(stderr, "too many windows, we only have 26 characters\n");
+        LOG("too many windows, we only have 26 characters\n");
         return;
     }
 
@@ -33,9 +34,9 @@ void create_window_label(gpointer item, gpointer data)
     LOG("window - id:%i, x:%i, y:%i\n", win_id, rect->x, rect->y);
 
     char desc[2];
-    desc[0] = curr->num;
+    desc[0] = curr->num + MIN_CHAR;
     desc[1] = '\0';
-    curr->map[curr->num - MIN_CHAR] = win_id;
+    curr->map[curr->num + 0] = win_id;
     curr->num++;
 
     if (xcb_child_window(rect->x + 20, rect->y + 20, desc))
@@ -46,8 +47,25 @@ void create_window_label(gpointer item, gpointer data)
     i3ipc_rect_free(rect);
 }
 
+static int selection_to_win_id(char_map map, char selection)
+{
+    if (selection == 0)
+    {
+        return -1;
+    }
+
+    if (selection < MIN_CHAR || selection > MAX_CHAR - 1)
+    {
+        fprintf(stderr, "selection not in range\n");
+        return -1;
+    }
+
+    return map.map[selection - MIN_CHAR];
+}
+
 int main(void)
 {
+
     if (xcb_init())
     {
         fprintf(stderr, "error initializing xcb");
@@ -57,54 +75,48 @@ int main(void)
     if (ipc_init())
     {
         fprintf(stderr, "error initializing i3-ipc");
-        xcb_finish();
         return 2;
     }
 
-    i3ipcConnection *conn = ipc_connection();
-    i3ipcCon *tree = i3ipc_connection_get_tree(conn, NULL);
-    i3ipcCon *focused = i3ipc_con_find_focused(tree);
-    i3ipcCon *ws = i3ipc_con_workspace(focused);
+    GList *cons = ipc_visible_windows();
+    if (cons == NULL) {
+        fprintf(stderr, "error enumerating all visible i3 windows\n");
+        return 3;
+    }
 
-    GList *cons = i3ipc_con_leaves(ws);
-    char_map map = { .num = MIN_CHAR };
+    char_map map = { .num = 0 };
     int idx;
     for (idx = 0; idx < DIFF_CHAR; idx++)
     {
         map.map[idx] = -1;
     }
 
-    g_list_foreach(cons, create_window_label, &map);
-
+    g_list_foreach(cons, (GFunc)create_window_label, &map);
     g_list_free(cons);
-    g_object_unref(tree);
 
     char selection = 0;
     int ret = xcb_main_window("EasyFocus: select a window (press ESC/CR to exit)", &selection);
-
-    ipc_finish();
-    xcb_finish();
-
     if (ret)
     {
         fprintf(stderr, "error creating main window");
         return 4;
     }
 
-    if (selection == 0)
-    {
-        fprintf(stderr, "no selection\n");
-        return 0;
-    }
-
     LOG("selection: %c\n", selection);
-    if (selection < MIN_CHAR || selection > MAX_CHAR - 1)
-    {
-        fprintf(stderr, "selection not in range\n");
+    int win_id = selection_to_win_id(map, selection);
+    LOG("window id: %i\n", win_id);
+    if (win_id < 0) {
+        fprintf(stderr, "unknown window label");
         return 5;
     }
 
-    printf("%i", map.map[selection - MIN_CHAR]);
+    if (ipc_focus_window(win_id)) {
+        fprintf(stderr, "cannot issue focus command\n");
+        return 6;
+    }
+
+    ipc_finish();
+    xcb_finish();
 
     return 0;
 }

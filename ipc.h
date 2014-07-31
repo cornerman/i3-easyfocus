@@ -5,6 +5,8 @@
 
 int ipc_init();
 i3ipcConnection *ipc_connection();
+GList *ipc_visible_windows();
+int ipc_focus_window(int win_id);
 void ipc_finish();
 
 #endif

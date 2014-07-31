@@ -1,5 +1,5 @@
 #ifndef I3_EASYFOCUS_XCB
-#define I3_EASYFOCUS_XCB value
+#define I3_EASYFOCUS_XCB
 
 int xcb_init();
 int xcb_main_window(char *desc, char *keysym_out);

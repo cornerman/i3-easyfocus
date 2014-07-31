@@ -1,6 +1,9 @@
 #include "xcb.h"
-#include "all.h"
+#include "util.h"
+#include "config.h"
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
 
@@ -10,12 +13,6 @@
 
 #define XK_MISCELLANY
 #include <X11/keysymdef.h>
-
-#define WIDTH_CHILD 14
-#define HEIGHT_CHILD 14
-#define WIDTH_MAIN 355
-#define HEIGHT_MAIN 14
-#define FONT_NAME "-misc-fixed-medium-r-normal--13-120-75-75-C-70-iso10646-1"
 
 enum
 {
@@ -77,8 +74,8 @@ static int draw_text(xcb_window_t window, int16_t x, int16_t y, const char *labe
     xcb_font_t font = xcb_generate_id(connection);
     xcb_void_cookie_t font_cookie = xcb_open_font_checked(connection,
                                     font,
-                                    strlen(FONT_NAME),
-                                    FONT_NAME);
+                                    strlen(XCB_FONT_NAME),
+                                    XCB_FONT_NAME);
 
     if (request_failed(font_cookie, "cannot open font"))
     {
@@ -145,7 +142,7 @@ int xcb_child_window(int pos_x, int pos_y, char *desc)
                                       screen->root_depth,
                                       window, screen->root,
                                       pos_x, pos_y,
-                                      WIDTH_CHILD, HEIGHT_CHILD,
+                                      XCB_CHILD_WIDTH, XCB_CHILD_HEIGHT,
                                       0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
                                       screen->root_visual,
                                       mask, values);
@@ -181,7 +178,7 @@ int xcb_child_window(int pos_x, int pos_y, char *desc)
             case XCB_EXPOSE:
             {
                 free(event);
-                if (draw_text(window, 4, HEIGHT_CHILD - 2, desc))
+                if (draw_text(window, 4, XCB_CHILD_HEIGHT - 2, desc))
                 {
                     fprintf(stderr, "error drawing text\n");
                     return 1;
@@ -214,8 +211,8 @@ int xcb_main_window(char *desc, char *keysym_out)
     xcb_void_cookie_t window_cookie = xcb_create_window_checked(connection,
                                       screen->root_depth,
                                       window, screen->root,
-                                      1, 1,
-                                      WIDTH_MAIN, HEIGHT_MAIN,
+                                      XCB_MAIN_POS_X, XCB_MAIN_POS_Y,
+                                      XCB_MAIN_WIDTH, XCB_MAIN_HEIGHT,
                                       0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
                                       screen->root_visual,
                                       mask, values);
@@ -273,7 +270,7 @@ int xcb_main_window(char *desc, char *keysym_out)
             case XCB_EXPOSE:
             {
                 LOG("xcb expose event\n");
-                if (draw_text(window, 4, HEIGHT_MAIN - 2, desc))
+                if (draw_text(window, 4, XCB_MAIN_HEIGHT - 2, desc))
                 {
                     fprintf(stderr, "error drawing text\n");
                     free(event);

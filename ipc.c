@@ -1,6 +1,8 @@
 #include "ipc.h"
 #include "config.h"
+#include "util.h"
 
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <glib.h>
@@ -20,6 +22,77 @@ int ipc_init()
         g_error_free(err);
     }
     return 0;
+}
+
+GList *ipc_find_visible_windows(i3ipcCon *root, GList *windows)
+{
+    const GList *nodes = i3ipc_con_get_nodes(root);
+    if (nodes == NULL)
+    {
+        windows = g_list_append(windows, root);
+        return windows;
+    }
+
+    gchar *layout = NULL;
+    g_object_get(root, "layout", &layout, NULL);
+    if (layout == NULL)
+    {
+        LOG("cannot get layout of con");
+        return NULL;
+    }
+
+    if ((strncmp(layout, "tabbed", 6) == 0)
+            || (strncmp(layout, "stacked", 7) == 0))
+    {
+        GList *focus_stack = NULL;
+        g_object_get(root, "focus", &focus_stack, NULL);
+        if (focus_stack == NULL)
+        {
+            LOG("cannot get focus stack from con");
+            g_free(layout);
+            return NULL;
+        }
+
+        int focus_id = GPOINTER_TO_INT(focus_stack->data);
+        const GList *elem;
+        i3ipcCon *curr;
+        for (elem = nodes; elem; elem = elem->next)
+        {
+            curr = elem->data;
+            int id = -1;
+            g_object_get(curr, "id", &id, NULL);
+            LOG("%i: %i\n", focus_id, id);
+            if (id == focus_id)
+            {
+                windows = ipc_find_visible_windows(curr, windows);
+            }
+            else
+            {
+                windows = g_list_append(windows, curr);
+            }
+
+        }
+
+        g_list_free(focus_stack);
+    }
+    else if ((strncmp(layout, "splith", 6) == 0)
+             || (strncmp(layout, "splitv", 6) == 0))
+    {
+        const GList *elem;
+        i3ipcCon *curr;
+        for (elem = nodes; elem; elem = elem->next)
+        {
+            curr = elem->data;
+            windows = ipc_find_visible_windows(curr, windows);
+        }
+    }
+    else
+    {
+        LOG("unknown layout of con");
+    }
+
+    g_free(layout);
+    return windows;
 }
 
 GList *ipc_visible_windows()
@@ -42,7 +115,7 @@ GList *ipc_visible_windows()
         return NULL;
     }
 
-    GList *cons = i3ipc_con_leaves(ws);
+    GList *cons = ipc_find_visible_windows(ws, NULL);
     g_object_unref(tree);
 
     return cons;
@@ -65,7 +138,10 @@ int ipc_focus_window(int win_id)
     return 0;
 }
 
-void ipc_finish() {
+void ipc_finish()
+{
     g_object_unref(connection);
     connection = NULL;
 }
+
+

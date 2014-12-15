@@ -201,7 +201,7 @@ int xcb_main_window(char *keysym_out)
     xcb_window_t window = xcb_generate_id(connection);
     mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
     values[0] = screen->white_pixel;
-    values[1] = XCB_EVENT_MASK_KEY_RELEASE |
+    values[1] = XCB_EVENT_MASK_KEY_PRESS |
                 XCB_EVENT_MASK_EXPOSURE;
 
     LOG("create main  window (id: %i)\n", window);
@@ -274,13 +274,13 @@ int xcb_main_window(char *keysym_out)
                     return 1;
                 }
             }
-            case XCB_KEY_RELEASE:
+            case XCB_KEY_PRESS:
             {
-                xcb_key_release_event_t *kr = (xcb_key_release_event_t *)event;
+                xcb_key_press_event_t *kr = (xcb_key_press_event_t *)event;
 
                 LOG("key: %i\n", kr->detail);
                 xcb_key_symbols_t *syms = xcb_key_symbols_alloc(connection);
-                xcb_keysym_t keysym = xcb_key_release_lookup_keysym(syms, kr, 0);
+                xcb_keysym_t keysym = xcb_key_press_lookup_keysym(syms, kr, 0);
                 LOG("sym: %i\n", keysym);
 
                 xcb_key_symbols_free(syms);

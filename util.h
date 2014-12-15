@@ -1,6 +1,9 @@
 #ifndef I3_EASYFOCUS_UTIL
 #define I3_EASYFOCUS_UTIL
 
+#include "config.h"
+#include <stdio.h>
+
 #define LOG(fmt, ...)                                                  \
     do {                                                               \
         if (DEBUG) {                                                   \

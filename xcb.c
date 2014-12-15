@@ -2,10 +2,8 @@
 #include "util.h"
 #include "config.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
 
 #include <xcb/xcb.h>
 #include <xcb/xproto.h>
@@ -32,7 +30,7 @@ static int get_atom(char *name, uint16_t type)
     xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(connection, cookie, NULL);
     if (reply == NULL)
     {
-        fprintf(stderr, "unable to get xcb atom\n");
+        LOG("unable to get xcb atom\n");
         return 1;
     }
 
@@ -61,9 +59,9 @@ static int request_failed(xcb_void_cookie_t cookie, char *err_msg)
     xcb_generic_error_t *err;
     if ((err = xcb_request_check(connection, cookie)) != NULL)
     {
-        fprintf(stderr, "request failed: %s. error code: %d\n", err_msg, err->error_code);
+        LOG("request failed: %s. error code: %d\n", err_msg, err->error_code);
         free(err);
-        return err->error_code;
+        return 1;
     }
 
     return 0;
@@ -180,7 +178,7 @@ int xcb_child_window(int pos_x, int pos_y, char *desc)
                 free(event);
                 if (draw_text(window, 4, XCB_CHILD_HEIGHT - 2, desc))
                 {
-                    fprintf(stderr, "error drawing text\n");
+                    LOG("error drawing text\n");
                     return 1;
                 }
 
@@ -195,11 +193,10 @@ int xcb_child_window(int pos_x, int pos_y, char *desc)
     return 1;
 }
 
-int xcb_main_window(char *desc, char *keysym_out)
+int xcb_main_window(char *keysym_out)
 {
     uint32_t mask;
     uint32_t values[2];
-    *keysym_out = 0;
 
     xcb_window_t window = xcb_generate_id(connection);
     mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
@@ -207,7 +204,7 @@ int xcb_main_window(char *desc, char *keysym_out)
     values[1] = XCB_EVENT_MASK_KEY_RELEASE |
                 XCB_EVENT_MASK_EXPOSURE;
 
-    LOG("create window (id: %i): %s\n", window, desc);
+    LOG("create main  window (id: %i)\n", window);
     xcb_void_cookie_t window_cookie = xcb_create_window_checked(connection,
                                       screen->root_depth,
                                       window, screen->root,
@@ -270,9 +267,9 @@ int xcb_main_window(char *desc, char *keysym_out)
             case XCB_EXPOSE:
             {
                 LOG("xcb expose event\n");
-                if (draw_text(window, 4, XCB_MAIN_HEIGHT - 2, desc))
+                if (draw_text(window, 4, XCB_MAIN_HEIGHT - 2, XCB_MAIN_TEXT))
                 {
-                    fprintf(stderr, "error drawing text\n");
+                    LOG("error drawing text\n");
                     free(event);
                     return 1;
                 }
@@ -318,7 +315,7 @@ int xcb_init()
     screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
     if (get_atoms())
     {
-        fprintf(stderr, "error getting atoms");
+        LOG("error getting atoms\n");
         return 1;
     }
 

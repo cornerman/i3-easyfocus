@@ -145,6 +145,14 @@ window *ipc_visible_windows()
         return NULL;
     }
 
+    gboolean fullscreen;
+    g_object_get(focused, "fullscreen-mode", &fullscreen, NULL);
+    if (fullscreen) {
+        LOG("focused window is in fullscreen mode\n");
+        g_object_unref(tree);
+        return NULL;
+    }
+
     i3ipcCon *ws = i3ipc_con_workspace(focused);
     if (ws == NULL)
     {

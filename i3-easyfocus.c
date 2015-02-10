@@ -3,6 +3,29 @@
 #include "xcb.h"
 #include "map.h"
 
+static int print_id = 0;
+
+int parse_args(int argc, char *argv[])
+{
+    while ((argc > 1) && (argv[1][0] == '-'))
+    {
+        switch (argv[1][1])
+        {
+        case 'p':
+            print_id = 1;
+            break;
+        default:
+            printf("Usage: i3-easyfocus <options>\n");
+            printf(" -p    only print window id\n");
+            return 1;
+        }
+
+        ++argv;
+        --argc;
+    }
+    return 0;
+}
+
 static int create_window_label(window *win)
 {
     char key = map_add(win->id);
@@ -33,7 +56,8 @@ static int create_window_label(window *win)
 static int create_window_labels(window *win)
 {
     map_init();
-    while (win != NULL) {
+    while (win != NULL)
+    {
         if (create_window_label(win))
         {
             return 1;
@@ -45,8 +69,13 @@ static int create_window_labels(window *win)
     return 0;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
+    if (parse_args(argc, argv))
+    {
+        return 1;
+    }
+
     if (xcb_init())
     {
         fprintf(stderr, "error initializing xcb\n");
@@ -90,7 +119,11 @@ int main(void)
     }
 
     LOG("window id: %i\n", win_id);
-    if (ipc_focus_window(win_id))
+    if (print_id)
+    {
+        printf("%i\n", win_id);
+    }
+    else if (ipc_focus_window(win_id))
     {
         fprintf(stderr, "cannot focus window\n");
         return 1;

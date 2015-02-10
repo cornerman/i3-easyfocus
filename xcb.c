@@ -12,47 +12,9 @@
 #define XK_MISCELLANY
 #include <X11/keysymdef.h>
 
-enum
-{
-    _NET_WM_WINDOW_TYPE,
-    _NET_WM_WINDOW_TYPE_DIALOG,
-    NUM_ATOMS
-};
-
-static xcb_atom_t atoms[NUM_ATOMS];
-
 static xcb_connection_t *connection = NULL;
 static xcb_screen_t *screen = NULL;
-
-static int get_atom(char *name, uint16_t type)
-{
-    xcb_intern_atom_cookie_t cookie = xcb_intern_atom(connection, 0, strlen(name), name);
-    xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(connection, cookie, NULL);
-    if (reply == NULL)
-    {
-        LOG("unable to get xcb atom\n");
-        return 1;
-    }
-
-    atoms[type] = reply->atom;
-    free(reply);
-
-    return 0;
-}
-
-static int get_atoms()
-{
-#define GET_ATOM(name)           \
-    if (get_atom(#name, name)) { \
-        return 1;                \
-    }
-
-    GET_ATOM(_NET_WM_WINDOW_TYPE);
-    GET_ATOM(_NET_WM_WINDOW_TYPE_DIALOG);
-#undef GET_ATOM
-
-    return 0;
-}
+static xcb_key_symbols_t *keysyms = NULL;
 
 static int request_failed(xcb_void_cookie_t cookie, char *err_msg)
 {
@@ -125,7 +87,42 @@ static int draw_text(xcb_window_t window, int16_t x, int16_t y, const char *labe
     return 0;
 }
 
-int xcb_child_window(int pos_x, int pos_y, char *desc)
+static int grab_keysym(xcb_keysym_t keysym)
+{
+    xcb_keycode_t min_keycode = xcb_get_setup(connection)->min_keycode;
+    xcb_keycode_t max_keycode = xcb_get_setup(connection)->max_keycode;
+
+    xcb_keycode_t i;
+    for (i = min_keycode; i && i < max_keycode; i++)
+    {
+        if ((xcb_key_symbols_get_keysym(keysyms, i, 0) != keysym))
+        {
+            continue;
+        }
+
+        LOG("grab key (keycode: %i, keysym: %i)\n", i, keysym);
+        xcb_void_cookie_t cookie = xcb_grab_key_checked(
+                                       connection,
+                                       1,
+                                       screen->root,
+                                       0,
+                                       i,
+                                       XCB_GRAB_MODE_ASYNC,
+                                       XCB_GRAB_MODE_ASYNC);
+
+        if (request_failed(cookie, "cannot grab key"))
+        {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    LOG("cannot find keycode for key (keysym: %i)\n", keysym);
+    return 1;
+}
+
+int xcb_create_text_window(int pos_x, int pos_y, char *desc)
 {
     uint32_t mask;
     uint32_t values[2];
@@ -140,7 +137,7 @@ int xcb_child_window(int pos_x, int pos_y, char *desc)
                                       screen->root_depth,
                                       window, screen->root,
                                       pos_x, pos_y,
-                                      XCB_CHILD_WIDTH, XCB_CHILD_HEIGHT,
+                                      XCB_WINDOW_WIDTH, XCB_WINDOW_HEIGHT,
                                       0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
                                       screen->root_visual,
                                       mask, values);
@@ -176,7 +173,7 @@ int xcb_child_window(int pos_x, int pos_y, char *desc)
             case XCB_EXPOSE:
             {
                 free(event);
-                if (draw_text(window, 4, XCB_CHILD_HEIGHT - 2, desc))
+                if (draw_text(window, 4, XCB_WINDOW_HEIGHT - 2, desc))
                 {
                     LOG("error drawing text\n");
                     return 1;
@@ -193,117 +190,47 @@ int xcb_child_window(int pos_x, int pos_y, char *desc)
     return 1;
 }
 
-int xcb_main_window(char *keysym_out)
+int xcb_register_for_key_event(char key)
 {
-    uint32_t mask;
-    uint32_t values[2];
+    LOG("register for key event (key: %c)\n", key);
+    return grab_keysym(key);
+}
 
-    xcb_window_t window = xcb_generate_id(connection);
-    mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-    values[0] = screen->white_pixel;
-    values[1] = XCB_EVENT_MASK_KEY_PRESS |
-                XCB_EVENT_MASK_EXPOSURE;
-
-    LOG("create main  window (id: %i)\n", window);
-    xcb_void_cookie_t window_cookie = xcb_create_window_checked(connection,
-                                      screen->root_depth,
-                                      window, screen->root,
-                                      XCB_MAIN_POS_X, XCB_MAIN_POS_Y,
-                                      XCB_MAIN_WIDTH, XCB_MAIN_HEIGHT,
-                                      0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
-                                      screen->root_visual,
-                                      mask, values);
-
-    if (request_failed(window_cookie, "cannot create window"))
+int xcb_wait_for_key_event(char *key)
+{
+    LOG("register for key event (ESC/CR)\n");
+    if (grab_keysym(XK_Escape) || grab_keysym(XK_Return))
     {
         return 1;
     }
 
-
-    xcb_void_cookie_t dialog_cookie = xcb_change_property(connection,
-                                      XCB_PROP_MODE_REPLACE,
-                                      window,
-                                      atoms[_NET_WM_WINDOW_TYPE],
-                                      XCB_ATOM_ATOM,
-                                      32,
-                                      1,
-                                      (unsigned char *)&atoms[_NET_WM_WINDOW_TYPE_DIALOG]);
-
-    if (request_failed(dialog_cookie, "cannot set _NET_WM_WINDOW_TYPE"))
+    LOG("waiting for key press event\n");
+    xcb_generic_event_t *event;
+    while ((event = xcb_wait_for_event(connection)))
     {
-        return 1;
-    }
-
-    char *title = "easyfocus";
-    xcb_void_cookie_t title_cookie = xcb_change_property(connection,
-                                     XCB_PROP_MODE_REPLACE,
-                                     window,
-                                     XCB_ATOM_WM_NAME,
-                                     XCB_ATOM_STRING,
-                                     8,
-                                     strlen(title),
-                                     title);
-
-    if (request_failed(title_cookie, "cannot set title"))
-    {
-        return 1;
-    }
-
-    xcb_void_cookie_t map_cookie = xcb_map_window_checked(connection, window);
-    if (request_failed(map_cookie, "cannot map window"))
-    {
-        return 1;
-    }
-
-    xcb_flush(connection);
-
-    xcb_generic_event_t  *event;
-    while (1)
-    {
-        if ((event = xcb_poll_for_event(connection)))
+        switch (event->response_type & ~0x80)
         {
-            switch (event->response_type & ~0x80)
-            {
-            case XCB_EXPOSE:
-            {
-                LOG("xcb expose event\n");
-                if (draw_text(window, 4, XCB_MAIN_HEIGHT - 2, XCB_MAIN_TEXT))
-                {
-                    LOG("error drawing text\n");
-                    free(event);
-                    return 1;
-                }
-            }
-            case XCB_KEY_PRESS:
-            {
-                xcb_key_press_event_t *kr = (xcb_key_press_event_t *)event;
+        case XCB_KEY_PRESS:
+        {
+            xcb_key_press_event_t *kr = (xcb_key_press_event_t *)event;
 
-                LOG("key: %i\n", kr->detail);
-                xcb_key_symbols_t *syms = xcb_key_symbols_alloc(connection);
-                xcb_keysym_t keysym = xcb_key_press_lookup_keysym(syms, kr, 0);
-                LOG("sym: %i\n", keysym);
-
-                xcb_key_symbols_free(syms);
-                free(event);
-
-                if (keysym == 0)
-                {
-                    continue;
-                }
-
-                if (keysym == XK_Escape || keysym == XK_Return)
-                {
-                    LOG("escape/return pressed\n");
-                    return 0;
-                }
-
-                *keysym_out = keysym;
-                return 0;
-            }
-            }
+            xcb_keysym_t keysym = xcb_key_press_lookup_keysym(keysyms, kr, 0);
+            LOG("key press event (keycode: %i, keysym: %i)\n", kr->detail, keysym);
 
             free(event);
+
+            if (keysym == XK_Escape || keysym == XK_Return)
+            {
+                LOG("escape/return pressed\n");
+                return 1;
+            }
+
+            *key = keysym;
+            return 0;
         }
+        }
+
+        free(event);
     }
 
     return 1;
@@ -312,17 +239,22 @@ int xcb_main_window(char *keysym_out)
 int xcb_init()
 {
     connection = xcb_connect(NULL, NULL);
-    screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
-    if (get_atoms())
+    if (xcb_connection_has_error(connection))
     {
-        LOG("error getting atoms\n");
+        LOG("cannot open display");
         return 1;
     }
 
+    screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
+    keysyms = xcb_key_symbols_alloc(connection);
     return 0;
 }
 
 void xcb_finish()
 {
+    xcb_key_symbols_free(keysyms);
     xcb_disconnect(connection);
+    connection = NULL;
+    screen = NULL;
+    keysyms = NULL;
 }

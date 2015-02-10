@@ -3,7 +3,7 @@
 #include "xcb.h"
 #include "map.h"
 
-static int create_child_window(window *win)
+static int create_window_label(window *win)
 {
     char key = map_add(win->id);
     if (key < 0)
@@ -12,12 +12,18 @@ static int create_child_window(window *win)
         return 1;
     }
 
+    if (xcb_register_for_key_event(key))
+    {
+        LOG("cannot register for key event\n");
+        return 1;
+    }
+
     char desc[2];
     desc[0] = key;
     desc[1] = '\0';
-    if (xcb_child_window(win->position.x, win->position.y, desc))
+    if (xcb_create_text_window(win->position.x, win->position.y, desc))
     {
-        LOG("error creating child window\n");
+        LOG("error creating text window\n");
         return 1;
     }
 
@@ -28,7 +34,7 @@ static int create_window_labels(window *win)
 {
     map_init();
     while (win != NULL) {
-        if (create_child_window(win))
+        if (create_window_label(win))
         {
             return 1;
         }
@@ -69,9 +75,9 @@ int main(void)
     }
 
     char selection;
-    if (xcb_main_window(&selection))
+    if (xcb_wait_for_key_event(&selection))
     {
-        fprintf(stderr, "error creating main window\n");
+        fprintf(stderr, "no selection\n");
         return 1;
     }
 

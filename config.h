@@ -3,13 +3,8 @@
 
 #define DEBUG 0
 
-#define XCB_CHILD_WIDTH 14
-#define XCB_CHILD_HEIGHT 14
-#define XCB_MAIN_WIDTH 325
-#define XCB_MAIN_HEIGHT 14
-#define XCB_MAIN_POS_Y 50
-#define XCB_MAIN_POS_X 50
+#define XCB_WINDOW_HEIGHT 14
+#define XCB_WINDOW_WIDTH 14
 #define XCB_FONT_NAME "-misc-fixed-medium-r-normal--13-120-75-75-C-70-iso10646-1"
-#define XCB_MAIN_TEXT "EasyFocus: press key to focus (ESC/CR to exit)"
 
 #endif

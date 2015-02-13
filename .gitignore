@@ -1,1 +1,3 @@
 i3-easyfocus
+src/*.o
+src/*.d

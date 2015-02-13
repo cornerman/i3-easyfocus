@@ -1,2 +1,28 @@
-all: i3-easyfocus.c
-	gcc -Wall -Wextra -Werror -o i3-easyfocus $(shell pkg-config --cflags --libs glib-2.0 gobject-2.0 i3ipc-glib-1.0 xcb xcb-keysyms) i3-easyfocus.c ipc.c xcb.c map.c win.c
+CC=gcc
+INCS=i3ipc-glib-1.0 xcb xcb-keysyms
+CFLAGS=$(shell pkg-config --cflags $(INCS)) --std=c99 -Wall -Wextra
+LDFLAGS=$(shell pkg-config --libs $(INCS))
+HEADERS=$(wildcard src/*.h)
+SOURCES=$(wildcard src/*.c)
+OBJECTS=$(SOURCES:.c=.o)
+DEPS=$(OBJECTS:.o=.d)
+EXECUTABLE=i3-easyfocus
+
+all: $(EXECUTABLE)
+
+debug: CFLAGS += -DDEBUG
+debug: all
+
+$(EXECUTABLE): $(OBJECTS)
+	@echo "Link $@"
+	@$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+
+-include $(DEPS)
+
+.c.o:
+	@echo "CC $<"
+	@$(CC) -c $(CFLAGS) -MMD -o $@ $<
+
+clean:
+	@echo "Cleaning"
+	@rm -f $(DEPS) $(OBJECTS) $(EXECUTABLE)

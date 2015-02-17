@@ -173,7 +173,7 @@ int xcb_create_text_window(int pos_x, int pos_y, char *desc)
             case XCB_EXPOSE:
             {
                 free(event);
-                if (draw_text(window, 4, XCB_WINDOW_HEIGHT - 2, desc))
+                if (draw_text(window, 1, XCB_WINDOW_HEIGHT - 1, desc))
                 {
                     LOG("error drawing text\n");
                     return 1;

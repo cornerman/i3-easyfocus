@@ -19,8 +19,11 @@ static window *con_to_window(i3ipcCon *con)
     i3ipcRect *deco_rect = NULL;
     g_object_get(con, "deco_rect", &deco_rect, NULL);
 
+    gboolean fullscreen;
+    g_object_get(con, "fullscreen-mode", &fullscreen, NULL);
+
     int x, y;
-    if (deco_rect->height == 0)
+    if (fullscreen || (deco_rect->height == 0))
     {
         i3ipcRect *rect = NULL;
         g_object_get(con, "rect", &rect, NULL);
@@ -57,7 +60,23 @@ static window *con_to_window(i3ipcCon *con)
     return window;
 }
 
-static window *find_visible_windows(i3ipcCon *root)
+static int con_get_focused_id(i3ipcCon *con)
+{
+    GList *focus_stack = NULL;
+    g_object_get(con, "focus", &focus_stack, NULL);
+    if (focus_stack == NULL)
+    {
+        LOG("empty focus stack in con\n");
+        return -1;
+    }
+
+    int focus_id = GPOINTER_TO_INT(focus_stack->data);
+    g_list_free(focus_stack);
+
+    return focus_id;
+}
+
+static window *visible_windows(i3ipcCon *root)
 {
     const GList *nodes = i3ipc_con_get_nodes(root);
     if (nodes == NULL)
@@ -69,21 +88,12 @@ static window *find_visible_windows(i3ipcCon *root)
     g_object_get(root, "layout", &layout, NULL);
 
     window *res = NULL;
+    const GList *elem;
+    i3ipcCon *curr;
     if ((strncmp(layout, "tabbed", 6) == 0)
             || (strncmp(layout, "stacked", 7) == 0))
     {
-        GList *focus_stack = NULL;
-        g_object_get(root, "focus", &focus_stack, NULL);
-        if (focus_stack == NULL)
-        {
-            LOG("empty focus stack in con\n");
-            g_free(layout);
-            return NULL;
-        }
-
-        int focus_id = GPOINTER_TO_INT(focus_stack->data);
-        const GList *elem;
-        i3ipcCon *curr;
+        int focus_id = con_get_focused_id(root);
         for (elem = nodes; elem; elem = elem->next)
         {
             curr = elem->data;
@@ -92,7 +102,7 @@ static window *find_visible_windows(i3ipcCon *root)
             window *win = NULL;
             if (id == focus_id)
             {
-                win = find_visible_windows(curr);
+                win = visible_windows(curr);
             }
             else
             {
@@ -101,18 +111,14 @@ static window *find_visible_windows(i3ipcCon *root)
 
             res = window_append(res, win);
         }
-
-        g_list_free(focus_stack);
     }
     else if ((strncmp(layout, "splith", 6) == 0)
              || (strncmp(layout, "splitv", 6) == 0))
     {
-        const GList *elem;
-        i3ipcCon *curr;
         for (elem = nodes; elem; elem = elem->next)
         {
             curr = elem->data;
-            window *win = find_visible_windows(curr);
+            window *win = visible_windows(curr);
             res = window_append(res, win);
         }
     }
@@ -126,46 +132,107 @@ static window *find_visible_windows(i3ipcCon *root)
     return res;
 }
 
-window *ipc_visible_windows()
+static window* visible_windows_on_ws(i3ipcCon *ws)
+{
+    const char *name = i3ipc_con_get_name(ws);
+    LOG("find visible windows on ws '%s'\n", name);
+
+    i3ipcCon *target = ws;
+    GList *descendants = i3ipc_con_descendents(ws);
+    GList *elem = NULL;
+    i3ipcCon *curr = NULL;
+    for (elem = descendants; elem; elem = elem->next)
+    {
+        curr = elem->data;
+        gboolean fullscreen;
+        g_object_get(curr, "fullscreen-mode", &fullscreen, NULL);
+        if (fullscreen)
+        {
+            LOG("con is in fullscreen mode\n");
+            target = curr;
+            break;
+        }
+    }
+
+    g_list_free(descendants);
+
+    return visible_windows(target);
+}
+
+static window* visible_windows_on_curr_ws(i3ipcCon *root)
+{
+    i3ipcCon *focused = i3ipc_con_find_focused(root);
+    if (focused == NULL)
+    {
+        LOG("cannot find focused window\n");
+        return NULL;
+    }
+
+    i3ipcCon *ws = i3ipc_con_workspace(focused);
+    ws = ((ws == NULL) ? focused : ws);
+
+    return visible_windows_on_ws(ws);
+}
+
+static window* visible_windows_on_all_ws(i3ipcCon *root)
+{
+    GSList *replies = i3ipc_connection_get_workspaces(connection, NULL);
+    GList *workspaces = i3ipc_con_workspaces(root);
+    window *res = NULL;
+
+    const GSList *reply;
+    i3ipcWorkspaceReply *curr_reply;
+    for (reply = replies; reply; reply = reply->next)
+    {
+        curr_reply = reply->data;
+        if (!curr_reply->visible)
+            continue;
+
+        const GList *ws;
+        i3ipcCon *curr_ws;
+        for (ws = workspaces; ws; ws = ws->next)
+        {
+            curr_ws = ws->data;
+            const char *name = i3ipc_con_get_name(curr_ws);
+            if (strcmp(curr_reply->name, name) == 0)
+            {
+                window *window = visible_windows_on_ws(curr_ws);
+                res = window_append(res, window);
+                break;
+            }
+        }
+    }
+
+    g_slist_free_full(replies, (GDestroyNotify) i3ipc_workspace_reply_free);
+    g_list_free(workspaces);
+
+    return res;
+}
+
+window *ipc_visible_windows(int visible_ws)
 {
     GError *err = NULL;
-    i3ipcCon *tree = i3ipc_connection_get_tree(connection, NULL);
-    if (tree == NULL)
+    i3ipcCon *root = i3ipc_connection_get_tree(connection, NULL);
+    if (root == NULL)
     {
         LOG("error getting tree\n");
         g_error_free(err);
         return NULL;
     }
 
-    i3ipcCon *focused = i3ipc_con_find_focused(tree);
-    if (focused == NULL)
+    window *windows = NULL;
+    if (visible_ws)
     {
-        LOG("cannot find focused window\n");
-        g_object_unref(tree);
-        return NULL;
+        windows = visible_windows_on_all_ws(root);
     }
-
-    gboolean fullscreen;
-    g_object_get(focused, "fullscreen-mode", &fullscreen, NULL);
-    if (fullscreen) {
-        LOG("focused window is in fullscreen mode\n");
-        g_object_unref(tree);
-        return NULL;
-    }
-
-    i3ipcCon *ws = i3ipc_con_workspace(focused);
-    if (ws == NULL)
+    else
     {
-        LOG("cannot find workspace of focused window\n");
-        g_object_unref(tree);
-        return NULL;
+        windows = visible_windows_on_curr_ws(root);
     }
 
-    window *window = find_visible_windows(ws);
+    g_object_unref(root);
 
-    g_object_unref(tree);
-
-    return window;
+    return windows;
 }
 
 int ipc_focus_window(int win_id)

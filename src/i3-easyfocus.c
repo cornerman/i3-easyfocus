@@ -4,6 +4,7 @@
 #include "map.h"
 
 static int print_id = 0;
+static int visible_ws = 0;
 
 int parse_args(int argc, char *argv[])
 {
@@ -14,9 +15,13 @@ int parse_args(int argc, char *argv[])
         case 'p':
             print_id = 1;
             break;
+        case 'a':
+            visible_ws = 1;
+            break;
         default:
             printf("Usage: i3-easyfocus <options>\n");
             printf(" -p    only print window id\n");
+            printf(" -a    label windows on all visible workspaces\n");
             return 1;
         }
 
@@ -88,7 +93,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    window *win = ipc_visible_windows();
+    window *win = ipc_visible_windows(visible_ws);
     if (win == NULL)
     {
         fprintf(stderr, "no visible windows\n");

@@ -4,7 +4,7 @@
 #include "win.h"
 
 int ipc_init();
-window *ipc_visible_windows();
+window *ipc_visible_windows(int visible_ws);
 int ipc_focus_window(int win_id);
 void ipc_finish();
 

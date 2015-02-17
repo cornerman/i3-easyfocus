@@ -78,7 +78,9 @@ static int con_get_focused_id(i3ipcCon *con)
 
 static window *visible_windows(i3ipcCon *root)
 {
-    const GList *nodes = i3ipc_con_get_nodes(root);
+    GList *nodes = g_list_copy((GList *) i3ipc_con_get_nodes(root));
+    GList *floating = g_list_copy((GList *) i3ipc_con_get_floating_nodes(root));
+    nodes = g_list_concat(nodes, floating);
     if (nodes == NULL)
     {
         return con_to_window(root);
@@ -128,6 +130,8 @@ static window *visible_windows(i3ipcCon *root)
     }
 
     g_free(layout);
+    g_list_free(nodes);
+    g_list_free(floating);
 
     return res;
 }

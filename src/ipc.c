@@ -3,18 +3,16 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <glib.h>
-#include <glib-object.h>
 #include <i3ipc-glib/i3ipc-glib.h>
 
 #define BUFFER 512
 
 static i3ipcConnection *connection = NULL;
 
-static window *con_to_window(i3ipcCon *con)
+static Window *con_to_window(i3ipcCon *con)
 {
-    int win_id;
-    g_object_get(con, "id", &win_id, NULL);
+    int id;
+    g_object_get(con, "id", &id, NULL);
 
     i3ipcRect *deco_rect = NULL;
     g_object_get(con, "deco_rect", &deco_rect, NULL);
@@ -50,9 +48,9 @@ static window *con_to_window(i3ipcCon *con)
 
     i3ipc_rect_free(deco_rect);
 
-    LOG("found window (id: %i, x: %i, y: %i)\n", win_id, x, y);
-    window *window = malloc(sizeof(window));
-    window->id = win_id;
+    LOG("found window (id: %i, x: %i, y: %i)\n", id, x, y);
+    Window *window = malloc(sizeof(window));
+    window->id = id;
     window->position.x = x;
     window->position.y = y;
     window->next = NULL;
@@ -67,7 +65,7 @@ static int con_get_focused_id(i3ipcCon *con)
     if (focus_stack == NULL)
     {
         LOG("empty focus stack in con\n");
-        return -1;
+        return 0;
     }
 
     int focus_id = GPOINTER_TO_INT(focus_stack->data);
@@ -76,73 +74,15 @@ static int con_get_focused_id(i3ipcCon *con)
     return focus_id;
 }
 
-static window *visible_windows(i3ipcCon *root)
+static i3ipcCon *con_get_visible_container(i3ipcCon *con)
 {
-    GList *nodes = g_list_copy((GList *) i3ipc_con_get_nodes(root));
-    GList *floating = g_list_copy((GList *) i3ipc_con_get_floating_nodes(root));
-    nodes = g_list_concat(nodes, floating);
-    if (nodes == NULL)
-    {
-        return con_to_window(root);
-    }
+    int id;
+    g_object_get(con, "id", &id, NULL);
+    LOG("find visible container in con '%i'\n", id);
 
-    gchar *layout = NULL;
-    g_object_get(root, "layout", &layout, NULL);
+    GList *descendants = i3ipc_con_descendents(con);
 
-    window *res = NULL;
-    const GList *elem;
-    i3ipcCon *curr;
-    if ((strncmp(layout, "tabbed", 6) == 0)
-            || (strncmp(layout, "stacked", 7) == 0))
-    {
-        int focus_id = con_get_focused_id(root);
-        for (elem = nodes; elem; elem = elem->next)
-        {
-            curr = elem->data;
-            int id;
-            g_object_get(curr, "id", &id, NULL);
-            window *win = NULL;
-            if (id == focus_id)
-            {
-                win = visible_windows(curr);
-            }
-            else
-            {
-                win = con_to_window(curr);
-            }
-
-            res = window_append(res, win);
-        }
-    }
-    else if ((strncmp(layout, "splith", 6) == 0)
-             || (strncmp(layout, "splitv", 6) == 0))
-    {
-        for (elem = nodes; elem; elem = elem->next)
-        {
-            curr = elem->data;
-            window *win = visible_windows(curr);
-            res = window_append(res, win);
-        }
-    }
-    else
-    {
-        LOG("unknown layout of con: %s\n", layout);
-    }
-
-    g_free(layout);
-    g_list_free(nodes);
-    g_list_free(floating);
-
-    return res;
-}
-
-static window* visible_windows_on_ws(i3ipcCon *ws)
-{
-    const char *name = i3ipc_con_get_name(ws);
-    LOG("find visible windows on ws '%s'\n", name);
-
-    i3ipcCon *target = ws;
-    GList *descendants = i3ipc_con_descendents(ws);
+    i3ipcCon *target = con;
     GList *elem = NULL;
     i3ipcCon *curr = NULL;
     for (elem = descendants; elem; elem = elem->next)
@@ -160,10 +100,72 @@ static window* visible_windows_on_ws(i3ipcCon *ws)
 
     g_list_free(descendants);
 
-    return visible_windows(target);
+    return target;
 }
 
-static window* visible_windows_on_curr_ws(i3ipcCon *root)
+static Window *visible_windows(i3ipcCon *root)
+{
+    GList *nodes = g_list_copy((GList *) i3ipc_con_get_nodes(root));
+    GList *floating = g_list_copy((GList *) i3ipc_con_get_floating_nodes(root));
+    nodes = g_list_concat(nodes, floating);
+    if (nodes == NULL)
+    {
+        return con_to_window(root);
+    }
+
+    gchar *layout = NULL;
+    g_object_get(root, "layout", &layout, NULL);
+
+    Window *res = NULL;
+    const GList *elem;
+    if ((strcmp(layout, "tabbed") == 0)
+            || (strcmp(layout, "stacked") == 0))
+    {
+        int focus_id = con_get_focused_id(root);
+        for (elem = nodes; elem; elem = elem->next)
+        {
+            i3ipcCon *curr = elem->data;
+            int id;
+            g_object_get(curr, "id", &id, NULL);
+            Window *win = NULL;
+            if (id == focus_id)
+            {
+                win = visible_windows(curr);
+                if (win->id != id)
+                {
+                    res = window_append(res, con_to_window(curr));
+                }
+            }
+            else
+            {
+                win = con_to_window(curr);
+            }
+
+            res = window_append(res, win);
+        }
+    }
+    else if ((strcmp(layout, "splith") == 0)
+             || (strcmp(layout, "splitv") == 0))
+    {
+        for (elem = nodes; elem; elem = elem->next)
+        {
+            i3ipcCon *curr = elem->data;
+            res = window_append(res, visible_windows(curr));
+        }
+    }
+    else
+    {
+        LOG("unknown layout of con: %s\n", layout);
+    }
+
+    g_free(layout);
+    g_list_free(nodes);
+    g_list_free(floating);
+
+    return res;
+}
+
+static Window *visible_windows_on_curr_output(i3ipcCon *root)
 {
     i3ipcCon *focused = i3ipc_con_find_focused(root);
     if (focused == NULL)
@@ -173,17 +175,18 @@ static window* visible_windows_on_curr_ws(i3ipcCon *root)
     }
 
     i3ipcCon *ws = i3ipc_con_workspace(focused);
-    ws = ((ws == NULL) ? focused : ws);
+    ws = (ws == NULL ? focused : ws);
 
-    return visible_windows_on_ws(ws);
+    i3ipcCon *con = con_get_visible_container(ws);
+    return visible_windows(con);
 }
 
-static window* visible_windows_on_all_ws(i3ipcCon *root)
+static Window *visible_windows_on_all_outputs(i3ipcCon *root)
 {
     GSList *replies = i3ipc_connection_get_workspaces(connection, NULL);
     GList *workspaces = i3ipc_con_workspaces(root);
-    window *res = NULL;
 
+    Window *res = NULL;
     const GSList *reply;
     i3ipcWorkspaceReply *curr_reply;
     for (reply = replies; reply; reply = reply->next)
@@ -200,8 +203,8 @@ static window* visible_windows_on_all_ws(i3ipcCon *root)
             const char *name = i3ipc_con_get_name(curr_ws);
             if (strcmp(curr_reply->name, name) == 0)
             {
-                window *window = visible_windows_on_ws(curr_ws);
-                res = window_append(res, window);
+                i3ipcCon *con = con_get_visible_container(curr_ws);
+                res = window_append(res, visible_windows(con));
                 break;
             }
         }
@@ -213,25 +216,24 @@ static window* visible_windows_on_all_ws(i3ipcCon *root)
     return res;
 }
 
-window *ipc_visible_windows(int visible_ws)
+Window *ipc_visible_windows(SearchArea search_area)
 {
-    GError *err = NULL;
     i3ipcCon *root = i3ipc_connection_get_tree(connection, NULL);
     if (root == NULL)
     {
         LOG("error getting tree\n");
-        g_error_free(err);
         return NULL;
     }
 
-    window *windows = NULL;
-    if (visible_ws)
+    Window *windows = NULL;
+    switch (search_area)
     {
-        windows = visible_windows_on_all_ws(root);
-    }
-    else
-    {
-        windows = visible_windows_on_curr_ws(root);
+    case CURRENT_OUTPUT:
+        windows = visible_windows_on_curr_output(root);
+        break;
+    case ALL_OUTPUTS:
+        windows = visible_windows_on_all_outputs(root);
+        break;
     }
 
     g_object_unref(root);
@@ -239,11 +241,11 @@ window *ipc_visible_windows(int visible_ws)
     return windows;
 }
 
-int ipc_focus_window(int win_id)
+int ipc_focus_window(int id)
 {
-    LOG("focusing window (id: %i)\n", win_id);
+    LOG("focusing window (id: %i)\n", id);
     char *cmd = malloc(BUFFER);
-    snprintf(cmd, BUFFER - 1, "[ con_id=%i ] focus", win_id);
+    snprintf(cmd, BUFFER - 1, "[ con_id=%i ] focus", id);
     GSList *replies = i3ipc_connection_command(connection, cmd, NULL);
     free(cmd);
 

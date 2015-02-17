@@ -10,9 +10,9 @@ typedef struct window
         int x;
         int y;
     } position;
-} window;
+} Window;
 
-window *window_append(window *win, window *item);
-void window_free(window *win);
+Window *window_append(Window *win, Window *item);
+void window_free(Window *win);
 
 #endif

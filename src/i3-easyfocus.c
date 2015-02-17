@@ -4,7 +4,7 @@
 #include "map.h"
 
 static int print_id = 0;
-static int visible_ws = 0;
+static SearchArea search_area = CURRENT_OUTPUT;
 
 int parse_args(int argc, char *argv[])
 {
@@ -16,12 +16,12 @@ int parse_args(int argc, char *argv[])
             print_id = 1;
             break;
         case 'a':
-            visible_ws = 1;
+            search_area = ALL_OUTPUTS;
             break;
         default:
             printf("Usage: i3-easyfocus <options>\n");
-            printf(" -p    only print window id\n");
-            printf(" -a    label windows on all visible workspaces\n");
+            printf(" -p    only print con id\n");
+            printf(" -a    label visible windows on all outputs\n");
             return 1;
         }
 
@@ -31,18 +31,18 @@ int parse_args(int argc, char *argv[])
     return 0;
 }
 
-static int create_window_label(window *win)
+static int create_window_label(Window *win)
 {
     char key = map_add(win->id);
     if (key < 0)
     {
-        LOG("cannot add window id\n");
+        fprintf(stderr, "cannot add window id\n");
         return 1;
     }
 
     if (xcb_register_for_key_event(key))
     {
-        LOG("cannot register for key event\n");
+        fprintf(stderr, "cannot register for key event\n");
         return 1;
     }
 
@@ -51,24 +51,65 @@ static int create_window_label(window *win)
     desc[1] = '\0';
     if (xcb_create_text_window(win->position.x, win->position.y, desc))
     {
-        LOG("error creating text window\n");
+        fprintf(stderr, "error creating text window\n");
         return 1;
     }
 
     return 0;
 }
 
-static int create_window_labels(window *win)
+static int create_window_labels()
 {
-    map_init();
-    while (win != NULL)
+    Window *win = ipc_visible_windows(search_area);
+    if (win == NULL)
     {
-        if (create_window_label(win))
+        fprintf(stderr, "no visible windows\n");
+        return 1;
+    }
+
+    map_init();
+    Window *curr = win;
+    while (curr != NULL)
+    {
+        if (create_window_label(curr))
         {
+            window_free(win);
             return 1;
         }
 
-        win = win->next;
+        curr = curr->next;
+    }
+
+    window_free(win);
+    return 0;
+}
+
+static int handle_selection()
+{
+    char selection;
+    if (xcb_wait_for_key_event(&selection))
+    {
+        fprintf(stderr, "no selection\n");
+        return 1;
+    }
+
+    LOG("selection: %c\n", selection);
+    int id = map_get(selection);
+    if (id < 0)
+    {
+        fprintf(stderr, "unknown selection\n");
+        return 1;
+    }
+
+    LOG("window id: %i\n", id);
+    if (print_id)
+    {
+        printf("%i\n", id);
+    }
+    else if (ipc_focus_window(id))
+    {
+        fprintf(stderr, "cannot focus window\n");
+        return 1;
     }
 
     return 0;
@@ -93,44 +134,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    window *win = ipc_visible_windows(visible_ws);
-    if (win == NULL)
+    if (create_window_labels())
     {
-        fprintf(stderr, "no visible windows\n");
         return 1;
     }
 
-    int created = create_window_labels(win);
-    window_free(win);
-    if (created)
+    if (handle_selection())
     {
-        fprintf(stderr, "error creating window labels\n");
-        return 1;
-    }
-
-    char selection;
-    if (xcb_wait_for_key_event(&selection))
-    {
-        fprintf(stderr, "no selection\n");
-        return 1;
-    }
-
-    LOG("selection: %c\n", selection);
-    int win_id = map_get(selection);
-    if (win_id < 0)
-    {
-        fprintf(stderr, "unknown window label\n");
-        return 1;
-    }
-
-    LOG("window id: %i\n", win_id);
-    if (print_id)
-    {
-        printf("%i\n", win_id);
-    }
-    else if (ipc_focus_window(win_id))
-    {
-        fprintf(stderr, "cannot focus window\n");
         return 1;
     }
 

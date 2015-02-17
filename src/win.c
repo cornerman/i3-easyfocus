@@ -2,24 +2,24 @@
 
 #include <stdlib.h>
 
-window *window_append(window *win, window *item)
+Window *window_append(Window *win, Window *item)
 {
     if (win == NULL)
     {
         return item;
     }
 
-    window *ptr;
+    Window *ptr;
     for (ptr = win; ptr->next != NULL; ptr = ptr->next) {}
     ptr->next = item;
     return win;
 }
 
-void window_free(window *win)
+void window_free(Window *win)
 {
     while (win != NULL)
     {
-        window *tmp = win;
+        Window *tmp = win;
         win = win->next;
         free(tmp);
     }

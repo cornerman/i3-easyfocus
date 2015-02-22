@@ -87,6 +87,29 @@ static int draw_text(xcb_window_t window, int16_t x, int16_t y, const char *labe
     return 0;
 }
 
+static int grab_keycode_mod(xcb_keycode_t keycode, uint16_t mod_mask)
+{
+    xcb_void_cookie_t cookie = xcb_grab_key_checked(
+                                   connection,
+                                   1,
+                                   screen->root,
+                                   mod_mask,
+                                   keycode,
+                                   XCB_GRAB_MODE_ASYNC,
+                                   XCB_GRAB_MODE_ASYNC);
+
+    return request_failed(cookie, "cannot grab key");
+}
+
+static int grab_keycode(xcb_keycode_t keycode)
+{
+    LOG("grab key (keycode: %i)\n", keycode);
+    return grab_keycode_mod(keycode, 0) // key
+           || grab_keycode_mod(keycode, XCB_MOD_MASK_2)
+           || grab_keycode_mod(keycode, XCB_MOD_MASK_LOCK)
+           || grab_keycode_mod(keycode, XCB_MOD_MASK_2 | XCB_MOD_MASK_LOCK);
+}
+
 static int grab_keysym(xcb_keysym_t keysym)
 {
     xcb_keycode_t min_keycode = xcb_get_setup(connection)->min_keycode;
@@ -95,30 +118,16 @@ static int grab_keysym(xcb_keysym_t keysym)
     xcb_keycode_t i;
     for (i = min_keycode; i && i < max_keycode; i++)
     {
-        if ((xcb_key_symbols_get_keysym(keysyms, i, 0) != keysym))
+        if (xcb_key_symbols_get_keysym(keysyms, i, 0) != keysym)
         {
             continue;
         }
 
-        LOG("grab key (keycode: %i, keysym: %i)\n", i, keysym);
-        xcb_void_cookie_t cookie = xcb_grab_key_checked(
-                                       connection,
-                                       1,
-                                       screen->root,
-                                       0,
-                                       i,
-                                       XCB_GRAB_MODE_ASYNC,
-                                       XCB_GRAB_MODE_ASYNC);
-
-        if (request_failed(cookie, "cannot grab key"))
-        {
-            return 1;
-        }
-
-        return 0;
+        LOG("translated keysym '%i' to keycode '%i'\n", keysym, i);
+        return grab_keycode(i);
     }
 
-    LOG("cannot find keycode for key (keysym: %i)\n", keysym);
+    LOG("cannot find keycode for keysym '%i'\n", keysym);
     return 1;
 }
 
@@ -212,10 +221,10 @@ int xcb_wait_for_key_event(char *key)
         {
         case XCB_KEY_PRESS:
         {
-            xcb_key_press_event_t *kr = (xcb_key_press_event_t *)event;
+            xcb_key_press_event_t *kp = (xcb_key_press_event_t *)event;
 
-            xcb_keysym_t keysym = xcb_key_press_lookup_keysym(keysyms, kr, 0);
-            LOG("key press event (keycode: %i, keysym: %i)\n", kr->detail, keysym);
+            xcb_keysym_t keysym = xcb_key_press_lookup_keysym(keysyms, kp, 0);
+            LOG("key press event (keycode: %i, keysym: %i)\n", kp->detail, keysym);
 
             free(event);
 

@@ -216,6 +216,22 @@ static Window *visible_windows_on_all_outputs(i3ipcCon *root)
     return res;
 }
 
+static Window *visible_windows_in_curr_con(i3ipcCon *root)
+{
+    i3ipcCon *focused = i3ipc_con_find_focused(root);
+    if (focused == NULL)
+    {
+        LOG("cannot find focused window\n");
+        return NULL;
+    }
+
+    i3ipcCon *parent;
+    g_object_get(focused, "parent", &parent, NULL);
+
+    i3ipcCon *con = con_get_visible_container(parent);
+    return visible_windows(con);
+}
+
 Window *ipc_visible_windows(SearchArea search_area)
 {
     i3ipcCon *root = i3ipc_connection_get_tree(connection, NULL);
@@ -233,6 +249,9 @@ Window *ipc_visible_windows(SearchArea search_area)
         break;
     case ALL_OUTPUTS:
         windows = visible_windows_on_all_outputs(root);
+        break;
+    case CURRENT_CONTAINER:
+        windows = visible_windows_in_curr_con(root);
         break;
     }
 

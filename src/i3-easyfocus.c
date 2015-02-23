@@ -23,10 +23,14 @@ int parse_args(int argc, char *argv[])
         case 'a':
             search_area = ALL_OUTPUTS;
             break;
+        case 'c':
+            search_area = CURRENT_CONTAINER;
+            break;
         default:
             printf("Usage: i3-easyfocus <options>\n");
             printf(" -p    only print con id\n");
             printf(" -a    label visible windows on all outputs\n");
+            printf(" -c    label visible windows within current container\n");
             return 1;
         }
 

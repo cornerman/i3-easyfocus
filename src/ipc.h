@@ -5,7 +5,8 @@
 
 typedef enum {
     CURRENT_OUTPUT,
-    ALL_OUTPUTS
+    ALL_OUTPUTS,
+    CURRENT_CONTAINER
 } SearchArea;
 
 int ipc_init();

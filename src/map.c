@@ -1,42 +1,46 @@
 #include "util.h"
+#include "config.h"
 #include "map.h"
 
-#define MIN_CHAR 97
-#define MAX_CHAR 122
-#define DIFF_CHAR (MAX_CHAR - MIN_CHAR + 1)
+#include <X11/keysym.h>
+#include <X11/keysymdef.h>
 
-static struct char_map
-{
-    int map[DIFF_CHAR];
-    int num;
-} id_map;
+#define LENGTH (sizeof(label_keysyms) / sizeof(label_keysyms[0]))
+static xcb_keysym_t label_keysyms[] = LABEL_KEYSYMS;
+
+static int id_map[LENGTH];
+static size_t current = 0;
 
 void map_init()
 {
-    id_map.num = 0;
+    current = 0;
 }
 
-char map_add(int id)
+xcb_keysym_t map_add(int id)
 {
-    if (id_map.num > DIFF_CHAR - 1)
+    if (current >= LENGTH)
     {
-        LOG("too many windows, we only have %i characters\n", DIFF_CHAR);
-        return -1;
+        LOG("too many windows, only configured %lu keysyms\n", LENGTH);
+        return XCB_NO_SYMBOL;
     }
 
-    int key = id_map.num;
-    id_map.num++;
-    id_map.map[key] = id;
-    return key + MIN_CHAR;
+    size_t key = current;
+    current++;
+    id_map[key] = id;
+    return label_keysyms[key];
 }
 
-int map_get(char key)
+int map_get(xcb_keysym_t keysym)
 {
-    if (key < MIN_CHAR || key > MIN_CHAR + id_map.num - 1)
+    size_t i;
+    for (i = 0; i < LENGTH; i++)
     {
-        LOG("selection not in range\n");
-        return -1;
+        if (label_keysyms[i] == keysym)
+        {
+            return id_map[i];
+        }
     }
 
-    return id_map.map[key - MIN_CHAR];
+    LOG("selection not in range\n");
+    return -1;
 }

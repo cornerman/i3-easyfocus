@@ -1,7 +1,12 @@
-#include "util.h"
 #include "ipc.h"
 #include "xcb.h"
 #include "map.h"
+#include "util.h"
+#include "config.h"
+
+#include <stdlib.h>
+#include <X11/keysym.h>
+#include <X11/keysymdef.h>
 
 static int print_id = 0;
 static SearchArea search_area = CURRENT_OUTPUT;
@@ -33,28 +38,34 @@ int parse_args(int argc, char *argv[])
 
 static int create_window_label(Window *win)
 {
-    char key = map_add(win->id);
-    if (key < 0)
+    xcb_keysym_t key = map_add(win->id);
+    if (key == XCB_NO_SYMBOL)
     {
         fprintf(stderr, "cannot add window id\n");
         return 1;
     }
 
-    if (xcb_register_for_key_event(key))
+    if (xcb_grab_keysym(key))
     {
         fprintf(stderr, "cannot register for key event\n");
         return 1;
     }
 
-    char desc[2];
-    desc[0] = key;
-    desc[1] = '\0';
-    if (xcb_create_text_window(win->position.x, win->position.y, desc))
+    char *label = xcb_keysym_to_string(key);
+    if (label == NULL)
     {
-        fprintf(stderr, "error creating text window\n");
+        fprintf(stderr, "cannot convert keysym to string\n");
         return 1;
     }
 
+    if (xcb_create_text_window(win->position.x, win->position.y, label))
+    {
+        fprintf(stderr, "cannot create text window\n");
+        free(label);
+        return 1;
+    }
+
+    free(label);
     return 0;
 }
 
@@ -64,6 +75,13 @@ static int create_window_labels()
     if (win == NULL)
     {
         fprintf(stderr, "no visible windows\n");
+        return 1;
+    }
+
+    if (xcb_grab_keysym(EXIT_KEYSYM))
+    {
+        fprintf(stderr, "cannot grab exit keysym\n");
+        window_free(win);
         return 1;
     }
 
@@ -86,14 +104,20 @@ static int create_window_labels()
 
 static int handle_selection()
 {
-    char selection;
+    xcb_keysym_t selection;
     if (xcb_wait_for_key_event(&selection))
     {
         fprintf(stderr, "no selection\n");
         return 1;
     }
 
-    LOG("selection: %c\n", selection);
+    LOG("selection: %i\n", selection);
+    if (selection == EXIT_KEYSYM)
+    {
+        fprintf(stderr, "selection cancelled");
+        return 1;
+    }
+
     int id = map_get(selection);
     if (id < 0)
     {

@@ -5,6 +5,7 @@ typedef struct window
 {
     struct window *next;
     int id;
+    int win_id;
     struct
     {
         int x;

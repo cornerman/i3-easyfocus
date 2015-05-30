@@ -9,6 +9,7 @@
 #include <X11/keysymdef.h>
 
 static int print_id = 0;
+static int window_id = 0;
 static SearchArea search_area = CURRENT_OUTPUT;
 
 int parse_args(int argc, char *argv[])
@@ -17,8 +18,13 @@ int parse_args(int argc, char *argv[])
     {
         switch (argv[1][1])
         {
-        case 'p':
+        case 'i':
             print_id = 1;
+            window_id = 0;
+            break;
+        case 'w':
+            print_id = 1;
+            window_id = 1;
             break;
         case 'a':
             search_area = ALL_OUTPUTS;
@@ -28,7 +34,8 @@ int parse_args(int argc, char *argv[])
             break;
         default:
             printf("Usage: i3-easyfocus <options>\n");
-            printf(" -p    only print con id\n");
+            printf(" -i    print con id, does not change focus\n");
+            printf(" -w    print window id, does not change focus\n");
             printf(" -a    label visible windows on all outputs\n");
             printf(" -c    label visible windows within current container\n");
             return 1;
@@ -42,7 +49,7 @@ int parse_args(int argc, char *argv[])
 
 static int create_window_label(Window *win)
 {
-    xcb_keysym_t key = map_add(win->id);
+    xcb_keysym_t key = map_add(win);
     if (key == XCB_NO_SYMBOL)
     {
         fprintf(stderr, "cannot add window id\n");
@@ -73,19 +80,11 @@ static int create_window_label(Window *win)
     return 0;
 }
 
-static int create_window_labels()
+static int create_window_labels(Window *win)
 {
-    Window *win = ipc_visible_windows(search_area);
-    if (win == NULL)
-    {
-        fprintf(stderr, "no visible windows\n");
-        return 1;
-    }
-
     if (xcb_grab_keysym(EXIT_KEYSYM))
     {
         fprintf(stderr, "cannot grab exit keysym\n");
-        window_free(win);
         return 1;
     }
 
@@ -95,14 +94,12 @@ static int create_window_labels()
     {
         if (create_window_label(curr))
         {
-            window_free(win);
             return 1;
         }
 
         curr = curr->next;
     }
 
-    window_free(win);
     return 0;
 }
 
@@ -122,24 +119,49 @@ static int handle_selection()
         return 1;
     }
 
-    int id = map_get(selection);
-    if (id < 0)
+    Window *win = map_get(selection);
+    if (win == NULL)
     {
         fprintf(stderr, "unknown selection\n");
         return 1;
     }
 
-    LOG("window id: %i\n", id);
+    LOG("window (id: %i, window: %i)\n", win->id, win->win_id);
     if (print_id)
     {
-        printf("%i\n", id);
+        printf("%i\n", window_id ? win->win_id : win->id);
     }
-    else if (ipc_focus_window(id))
+    else if (ipc_focus_window(win->id))
     {
         fprintf(stderr, "cannot focus window\n");
         return 1;
     }
 
+    return 0;
+}
+
+static int select_window()
+{
+    Window *win = ipc_visible_windows(search_area);
+    if (win == NULL)
+    {
+        fprintf(stderr, "no visible windows\n");
+        return 1;
+    }
+
+    if (create_window_labels(win))
+    {
+        window_free(win);
+        return 1;
+    }
+
+    if (handle_selection())
+    {
+        window_free(win);
+        return 1;
+    }
+
+    window_free(win);
     return 0;
 }
 
@@ -162,12 +184,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (create_window_labels())
-    {
-        return 1;
-    }
-
-    if (handle_selection())
+    if (select_window())
     {
         return 1;
     }
@@ -177,3 +194,4 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+

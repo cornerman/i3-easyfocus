@@ -8,7 +8,7 @@
 #define LENGTH (sizeof(label_keysyms) / sizeof(label_keysyms[0]))
 static xcb_keysym_t label_keysyms[] = LABEL_KEYSYMS;
 
-static int id_map[LENGTH];
+static Window *win_map[LENGTH];
 static size_t current = 0;
 
 void map_init()
@@ -16,7 +16,7 @@ void map_init()
     current = 0;
 }
 
-xcb_keysym_t map_add(int id)
+xcb_keysym_t map_add(Window* win)
 {
     if (current >= LENGTH)
     {
@@ -26,21 +26,21 @@ xcb_keysym_t map_add(int id)
 
     size_t key = current;
     current++;
-    id_map[key] = id;
+    win_map[key] = win;
     return label_keysyms[key];
 }
 
-int map_get(xcb_keysym_t keysym)
+Window *map_get(xcb_keysym_t keysym)
 {
     size_t i;
     for (i = 0; i < LENGTH; i++)
     {
         if (label_keysyms[i] == keysym)
         {
-            return id_map[i];
+            return win_map[i];
         }
     }
 
     LOG("selection not in range\n");
-    return -1;
+    return NULL;
 }

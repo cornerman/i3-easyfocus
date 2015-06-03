@@ -52,7 +52,7 @@ static Window *con_to_window(i3ipcCon *con)
     i3ipc_rect_free(deco_rect);
 
     LOG("found window (id: %i, window: %i, x: %i, y: %i)\n", id, win_id, x, y);
-    Window *window = malloc(sizeof(window));
+    Window *window = malloc(sizeof(Window));
     window->id = id;
     window->win_id = win_id;
     window->position.x = x;

@@ -233,9 +233,9 @@ int xcb_grab_keysym(xcb_keysym_t keysym)
     return 1;
 }
 
-int xcb_wait_for_key_event(xcb_keysym_t *keysym)
+xcb_keysym_t xcb_wait_for_user_input()
 {
-    LOG("waiting for key press event\n");
+    LOG("waiting for xcb event\n");
     xcb_generic_event_t *event;
     while ((event = xcb_wait_for_event(connection)))
     {
@@ -248,9 +248,16 @@ int xcb_wait_for_key_event(xcb_keysym_t *keysym)
             xcb_keysym_t sym = xcb_key_press_lookup_keysym(keysyms, kp, 0);
             LOG("key press event (keycode: %i, keysym: %i)\n", kp->detail, sym);
 
-            *keysym = sym;
             free(event);
-            return 0;
+            return sym;
+        }
+        case XCB_CONFIGURE_NOTIFY:
+        {
+            // xcb_window_t wid = ((xcb_enter_notify_event_t*)e)->event;
+            LOG("configure notify event\n");
+
+            free(event);
+            return XCB_NO_SYMBOL;
         }
         }
 
@@ -258,6 +265,26 @@ int xcb_wait_for_key_event(xcb_keysym_t *keysym)
     }
 
     return 1;
+}
+
+int xcb_register_configure_notify()
+{
+    LOG("registering for configure notify event\n");
+    uint32_t mask = XCB_CW_EVENT_MASK;
+    uint32_t values[1];
+    values[0] = XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY;
+    xcb_void_cookie_t cookie = xcb_change_window_attributes_checked(connection,
+                               screen->root,
+                               mask,
+                               values);
+
+    if (request_failed(cookie, "cannot register for events on root window"))
+    {
+        return 1;
+    }
+
+    xcb_flush(connection);
+    return 0;
 }
 
 int xcb_init()

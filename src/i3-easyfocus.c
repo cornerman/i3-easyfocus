@@ -52,7 +52,7 @@ static int create_window_label(Window *win)
     xcb_keysym_t key = map_add(win);
     if (key == XCB_NO_SYMBOL)
     {
-        fprintf(stderr, "cannot add window id\n");
+        fprintf(stderr, "cannot find a free keysym\n");
         return 1;
     }
 
@@ -82,12 +82,6 @@ static int create_window_label(Window *win)
 
 static int create_window_labels(Window *win)
 {
-    if (xcb_grab_keysym(EXIT_KEYSYM))
-    {
-        fprintf(stderr, "cannot grab exit keysym\n");
-        return 1;
-    }
-
     map_init();
     Window *curr = win;
     while (curr != NULL)
@@ -103,22 +97,8 @@ static int create_window_labels(Window *win)
     return 0;
 }
 
-static int handle_selection()
+static int handle_selection(xcb_keysym_t selection)
 {
-    xcb_keysym_t selection;
-    if (xcb_wait_for_key_event(&selection))
-    {
-        fprintf(stderr, "no selection\n");
-        return 1;
-    }
-
-    LOG("selection: %i\n", selection);
-    if (selection == EXIT_KEYSYM)
-    {
-        fprintf(stderr, "selection cancelled");
-        return 1;
-    }
-
     Window *win = map_get(selection);
     if (win == NULL)
     {
@@ -140,28 +120,77 @@ static int handle_selection()
     return 0;
 }
 
+static int setup_xcb()
+{
+    if (xcb_init())
+    {
+        fprintf(stderr, "error initializing xcb\n");
+        return 1;
+    }
+
+    if (xcb_register_configure_notify())
+    {
+        xcb_finish();
+        fprintf(stderr, "failed to register for configure notify\n");
+        return 1;
+    }
+
+    if (xcb_grab_keysym(EXIT_KEYSYM))
+    {
+        xcb_finish();
+        fprintf(stderr, "cannot grab exit keysym\n");
+        return 1;
+    }
+
+    return 0;
+}
+
 static int select_window()
 {
-    Window *win = ipc_visible_windows(search_area);
-    if (win == NULL)
+    int searching = 1;
+    while (searching)
     {
-        fprintf(stderr, "no visible windows\n");
-        return 1;
-    }
+        // TODO: should probably not reconnect to xserver each time
+        // - need to destroy all previous popup windows.
+        if (setup_xcb())
+        {
+            return 1;
+        }
 
-    if (create_window_labels(win))
-    {
+        Window *win = ipc_visible_windows(search_area);
+        if (win == NULL)
+        {
+            fprintf(stderr, "no visible windows\n");
+            return 1;
+        }
+
+        if (create_window_labels(win))
+        {
+            window_free(win);
+            return 1;
+        }
+
+        xcb_keysym_t selection = xcb_wait_for_user_input();
+        xcb_finish();
+
+        if (selection != XCB_NO_SYMBOL)
+        {
+            LOG("selection: %i\n", selection);
+            if (selection != EXIT_KEYSYM)
+            {
+                if (handle_selection(selection))
+                {
+                    window_free(win);
+                    return 1;
+                }
+            }
+
+            searching = 0;
+        }
+
         window_free(win);
-        return 1;
     }
 
-    if (handle_selection())
-    {
-        window_free(win);
-        return 1;
-    }
-
-    window_free(win);
     return 0;
 }
 
@@ -169,12 +198,6 @@ int main(int argc, char *argv[])
 {
     if (parse_args(argc, argv))
     {
-        return 1;
-    }
-
-    if (xcb_init())
-    {
-        fprintf(stderr, "error initializing xcb\n");
         return 1;
     }
 
@@ -190,7 +213,6 @@ int main(int argc, char *argv[])
     }
 
     ipc_finish();
-    xcb_finish();
 
     return 0;
 }

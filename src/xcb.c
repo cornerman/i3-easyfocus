@@ -197,6 +197,7 @@ int xcb_create_text_window(int pos_x, int pos_y, const char *label)
 
 char *xcb_keysym_to_string(xcb_keysym_t keysym)
 {
+    //TODO: this is not really the correct string representation of the key
     char *key = XKeysymToString(keysym);
     if (key == NULL)
     {

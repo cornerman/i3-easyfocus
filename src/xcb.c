@@ -253,8 +253,14 @@ xcb_keysym_t xcb_wait_for_user_input()
         }
         case XCB_CONFIGURE_NOTIFY:
         {
-            // xcb_window_t wid = ((xcb_enter_notify_event_t*)e)->event;
             LOG("configure notify event\n");
+
+            free(event);
+            return XCB_NO_SYMBOL;
+        }
+        case XCB_FOCUS_OUT:
+        {
+            LOG("focus change event\n");
 
             free(event);
             return XCB_NO_SYMBOL;
@@ -272,7 +278,7 @@ int xcb_register_configure_notify()
     LOG("registering for configure notify event\n");
     uint32_t mask = XCB_CW_EVENT_MASK;
     uint32_t values[1];
-    values[0] = XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY;
+    values[0] = XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY | XCB_EVENT_MASK_FOCUS_CHANGE;
     xcb_void_cookie_t cookie = xcb_change_window_attributes_checked(connection,
                                screen->root,
                                mask,

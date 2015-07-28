@@ -164,7 +164,6 @@ static Window *visible_windows(i3ipcCon *root)
 
     g_free(layout);
     g_list_free(nodes);
-    g_list_free(floating);
 
     return res;
 }

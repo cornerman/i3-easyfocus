@@ -2,7 +2,7 @@
 
 Focus and select windows in [i3](https://github.com/i3/i3).
 
-Draws a small label ('a'-'z') on top of each visible container, which can be selected by pressing the corresponding key on the keyboard (cancel with ESC).
+Draws a small label ('a'-'z') on top of each visible container, which can be selected by pressing the corresponding key on the keyboard (cancel with ESC). By default, only windows on the current workspace are labelled.
 
 ## Usage
 

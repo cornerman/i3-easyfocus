@@ -237,6 +237,7 @@ xcb_keysym_t xcb_wait_for_user_input()
 {
     LOG("waiting for xcb event\n");
     xcb_generic_event_t *event;
+    int focused_in = 0;
     while ((event = xcb_wait_for_event(connection)))
     {
         switch (event->response_type & ~0x80)
@@ -260,10 +261,16 @@ xcb_keysym_t xcb_wait_for_user_input()
         }
         case XCB_FOCUS_OUT:
         {
-            LOG("focus change event\n");
-
-            free(event);
-            return XCB_NO_SYMBOL;
+            LOG("focus out event\n");
+            if (focused_in) {
+                free(event);
+                return XCB_NO_SYMBOL;
+            }
+        }
+        case XCB_FOCUS_IN:
+        {
+            LOG("focus in event\n");
+            focused_in = 1;
         }
         }
 

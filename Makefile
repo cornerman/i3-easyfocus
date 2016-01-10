@@ -15,7 +15,7 @@ debug: all
 
 $(EXECUTABLE): $(OBJECTS)
 	@echo "Link $@"
-	@$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+	@$(CC) $(OBJECTS) $(LDFLAGS) -o $@
 
 -include $(DEPS)
 

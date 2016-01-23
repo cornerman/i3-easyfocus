@@ -73,7 +73,6 @@ static int con_get_focused_id(i3ipcCon *con)
     }
 
     int focus_id = GPOINTER_TO_INT(focus_stack->data);
-    g_list_free(focus_stack);
 
     return focus_id;
 }
@@ -230,8 +229,9 @@ static Window *visible_windows_in_curr_con(i3ipcCon *root)
 
     i3ipcCon *parent;
     g_object_get(focused, "parent", &parent, NULL);
-
     i3ipcCon *con = con_get_visible_container(parent);
+    g_object_unref(parent);
+
     return visible_windows(con);
 }
 

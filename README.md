@@ -31,6 +31,7 @@ Usage: i3-easyfocus <options>
  -w    print window id, does not change focus
  -a    label visible windows on all outputs
  -c    label visible windows within current container
+ -r    rapid mode, keep on running until Escape is pressed
 ```
 
 You can change the keybindings and the font in ```src/config.h```.

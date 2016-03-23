@@ -10,6 +10,7 @@
 
 static int print_id = 0;
 static int window_id = 0;
+static int rapid_mode = 0;
 static SearchArea search_area = CURRENT_OUTPUT;
 
 int parse_args(int argc, char *argv[])
@@ -32,12 +33,16 @@ int parse_args(int argc, char *argv[])
         case 'c':
             search_area = CURRENT_CONTAINER;
             break;
+        case 'r':
+            rapid_mode = 1;
+            break;
         default:
             printf("Usage: i3-easyfocus <options>\n");
             printf(" -i    print con id, does not change focus\n");
             printf(" -w    print window id, does not change focus\n");
             printf(" -a    label visible windows on all outputs\n");
             printf(" -c    label visible windows within current container\n");
+            printf(" -r    rapid mode, keep on running until Escape is pressed\n");
             return 1;
         }
 
@@ -176,16 +181,20 @@ static int select_window()
         if (selection != XCB_NO_SYMBOL)
         {
             LOG("selection: %i\n", selection);
-            if (selection != EXIT_KEYSYM)
+            if (selection == EXIT_KEYSYM)
+            {
+                searching = 0;
+            } else if (selection != EXIT_KEYSYM)
             {
                 if (handle_selection(selection))
                 {
                     window_free(win);
                     return 1;
                 }
+
+                searching = rapid_mode;
             }
 
-            searching = 0;
         }
 
         window_free(win);

@@ -4,7 +4,7 @@
 typedef struct window
 {
     struct window *next;
-    int id;
+    unsigned long id;
     int win_id;
     struct
     {

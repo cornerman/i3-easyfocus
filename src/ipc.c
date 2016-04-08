@@ -11,7 +11,7 @@ static i3ipcConnection *connection = NULL;
 
 static Window *con_to_window(i3ipcCon *con)
 {
-    int id;
+    unsigned long id;
     g_object_get(con, "id", &id, NULL);
 
     int win_id;
@@ -51,7 +51,7 @@ static Window *con_to_window(i3ipcCon *con)
 
     i3ipc_rect_free(deco_rect);
 
-    LOG("found window (id: %i, window: %i, x: %i, y: %i)\n", id, win_id, x, y);
+    LOG("found window (id: %lu, window: %i, x: %i, y: %i)\n", id, win_id, x, y);
     Window *window = malloc(sizeof(Window));
     window->id = id;
     window->win_id = win_id;
@@ -62,7 +62,7 @@ static Window *con_to_window(i3ipcCon *con)
     return window;
 }
 
-static int con_get_focused_id(i3ipcCon *con)
+static unsigned long con_get_focused_id(i3ipcCon *con)
 {
     GList *focus_stack = NULL;
     g_object_get(con, "focus", &focus_stack, NULL);
@@ -72,16 +72,16 @@ static int con_get_focused_id(i3ipcCon *con)
         return 0;
     }
 
-    int focus_id = GPOINTER_TO_INT(focus_stack->data);
+    unsigned long focus_id = (unsigned long) focus_stack->data;
 
     return focus_id;
 }
 
 static i3ipcCon *con_get_visible_container(i3ipcCon *con)
 {
-    int id;
+    unsigned long id;
     g_object_get(con, "id", &id, NULL);
-    LOG("find visible container in con '%i'\n", id);
+    LOG("find visible container in con '%lu'\n", id);
 
     GList *descendants = i3ipc_con_descendents(con);
 
@@ -124,11 +124,11 @@ static Window *visible_windows(i3ipcCon *root)
     if ((strcmp(layout, "tabbed") == 0)
             || (strcmp(layout, "stacked") == 0))
     {
-        int focus_id = con_get_focused_id(root);
+        unsigned long focus_id = con_get_focused_id(root);
         for (elem = nodes; elem; elem = elem->next)
         {
             i3ipcCon *curr = elem->data;
-            int id;
+            unsigned long id;
             g_object_get(curr, "id", &id, NULL);
             Window *win = NULL;
             if (id == focus_id)
@@ -263,11 +263,11 @@ Window *ipc_visible_windows(SearchArea search_area)
     return windows;
 }
 
-int ipc_focus_window(int id)
+int ipc_focus_window(Window *window)
 {
-    LOG("focusing window (id: %i)\n", id);
+    LOG("focusing window (id: %lu)\n", window->id);
     char *cmd = malloc(BUFFER);
-    snprintf(cmd, BUFFER - 1, "[ con_id=%i ] focus", id);
+    snprintf(cmd, BUFFER - 1, "[ con_id=%lu ] focus", window->id);
     GSList *replies = i3ipc_connection_command(connection, cmd, NULL);
     free(cmd);
 

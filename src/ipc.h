@@ -11,7 +11,7 @@ typedef enum {
 
 int ipc_init();
 Window *ipc_visible_windows(SearchArea search_area);
-int ipc_focus_window(int id);
+int ipc_focus_window(Window *window);
 void ipc_finish();
 
 #endif

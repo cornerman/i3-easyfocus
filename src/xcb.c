@@ -138,7 +138,7 @@ int xcb_create_text_window(int pos_x, int pos_y, const char *label)
     values[0] = screen->white_pixel;
     values[1] = XCB_EVENT_MASK_EXPOSURE;
 
-    LOG("create window (id: %i, x: %i, y: %i): %s\n", window, pos_x, pos_y, label);
+    LOG("create window (id: %u, x: %i, y: %i): %s\n", window, pos_x, pos_y, label);
     xcb_void_cookie_t window_cookie = xcb_create_window_checked(connection,
                                       screen->root_depth,
                                       window, screen->root,

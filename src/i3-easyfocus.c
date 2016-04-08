@@ -111,12 +111,15 @@ static int handle_selection(xcb_keysym_t selection)
         return 1;
     }
 
-    LOG("window (id: %i, window: %i)\n", win->id, win->win_id);
+    LOG("window (id: %lu, window: %i)\n", win->id, win->win_id);
     if (print_id)
     {
-        printf("%i\n", window_id ? win->win_id : win->id);
+        if (window_id)
+            printf("%i\n", win->win_id);
+        else
+            printf("%lu\n", win->id);
     }
-    else if (ipc_focus_window(win->id))
+    else if (ipc_focus_window(win))
     {
         fprintf(stderr, "cannot focus window\n");
         return 1;

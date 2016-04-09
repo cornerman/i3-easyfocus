@@ -36,6 +36,10 @@ Usage: i3-easyfocus <options>
 
 You can change the keybindings and the font in ```src/config.h```.
 
+## Screenshot
+
+![Screenshot](screenshot.png)
+
 ## Dependencies
 
 * [i3ipc-glib](https://github.com/acrisci/i3ipc-glib) (>= 0.6.0)

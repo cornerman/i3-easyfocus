@@ -111,11 +111,11 @@ static int handle_selection(xcb_keysym_t selection)
         return 1;
     }
 
-    LOG("window (id: %lu, window: %i)\n", win->id, win->win_id);
+    LOG("window (id: %lu, window: %u)\n", win->id, win->win_id);
     if (print_id)
     {
         if (window_id)
-            printf("%i\n", win->win_id);
+            printf("%u\n", win->win_id);
         else
             printf("%lu\n", win->id);
     }

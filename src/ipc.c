@@ -14,7 +14,7 @@ static Window *con_to_window(i3ipcCon *con)
     unsigned long id;
     g_object_get(con, "id", &id, NULL);
 
-    int win_id;
+    uint32_t win_id;
     g_object_get(con, "window", &win_id, NULL);
 
     i3ipcRect *deco_rect = NULL;
@@ -51,7 +51,7 @@ static Window *con_to_window(i3ipcCon *con)
 
     i3ipc_rect_free(deco_rect);
 
-    LOG("found window (id: %lu, window: %i, x: %i, y: %i)\n", id, win_id, x, y);
+    LOG("found window (id: %lu, window: %u, x: %i, y: %i)\n", id, win_id, x, y);
     Window *window = malloc(sizeof(Window));
     window->id = id;
     window->win_id = win_id;

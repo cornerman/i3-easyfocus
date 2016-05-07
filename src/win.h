@@ -1,11 +1,13 @@
 #ifndef I3_EASYFOCUS_WIN
 #define I3_EASYFOCUS_WIN
 
+#include <stdint.h>
+
 typedef struct window
 {
     struct window *next;
     unsigned long id;
-    int win_id;
+    uint32_t win_id;
     struct
     {
         int x;

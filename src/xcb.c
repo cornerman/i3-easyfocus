@@ -54,6 +54,7 @@ static int grab_keycode(xcb_keycode_t keycode)
 static xcb_char2b_t *string_to_char2b(const char *text, size_t len)
 {
     xcb_char2b_t *str = malloc(sizeof(xcb_char2b_t) * len);
+
     size_t i;
     for (i = 0; i < len; i++)
     {
@@ -218,6 +219,7 @@ int xcb_grab_keysym(xcb_keysym_t keysym)
     xcb_keycode_t max_keycode = xcb_get_setup(connection)->max_keycode;
 
     xcb_keycode_t i;
+    int foundCode = 0;
     for (i = min_keycode; i && i < max_keycode; i++)
     {
         if (xcb_key_symbols_get_keysym(keysyms, i, 0) != keysym)
@@ -226,7 +228,15 @@ int xcb_grab_keysym(xcb_keysym_t keysym)
         }
 
         LOG("translated keysym '%i' to keycode '%i'\n", keysym, i);
-        return grab_keycode(i);
+        foundCode = 1;
+        if (grab_keycode(i)) {
+            LOG("failed to grab keycode '%i'\n", i);
+            return 1;
+        }
+    }
+
+    if (foundCode) {
+        return 0;
     }
 
     LOG("cannot find keycode for keysym '%i' in first column\n", keysym);

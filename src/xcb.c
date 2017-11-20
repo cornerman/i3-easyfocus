@@ -276,11 +276,13 @@ xcb_keysym_t xcb_wait_for_user_input()
                 free(event);
                 return XCB_NO_SYMBOL;
             }
+            break;
         }
         case XCB_FOCUS_IN:
         {
             LOG("focus in event\n");
             focused_in = 1;
+            break;
         }
         }
 

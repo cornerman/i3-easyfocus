@@ -185,7 +185,8 @@ static Window *visible_windows_on_curr_output(i3ipcCon *root)
 
 static Window *visible_windows_on_all_outputs(i3ipcCon *root)
 {
-    GSList *replies = i3ipc_connection_get_workspaces(connection, NULL);
+    GSList *raw_replies = i3ipc_connection_get_workspaces(connection, NULL);
+    GSList *replies = g_slist_reverse(raw_replies); // i3ipc-glib reverses the order internally
     GList *workspaces = i3ipc_con_workspaces(root);
 
     Window *res = NULL;

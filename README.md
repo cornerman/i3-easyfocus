@@ -44,3 +44,13 @@ You can change the keybindings and the font in ```src/config.h```.
 
 * [i3ipc-glib](https://github.com/acrisci/i3ipc-glib) (>= 0.6.0)
 * xcb and xcb-keysyms
+
+## Problems/Debugging
+
+If there is a problem or you have an idea, please feel free to open a new issue.
+
+In order to get more details about a problem you can build in debug mode, which will produce more log messages:
+```
+make clean debug
+./i3-easyfocus
+```

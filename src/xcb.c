@@ -323,11 +323,11 @@ static int open_font(const char *font_pattern)
     return request_failed(cookie, "cannot open font");
 }
 
-static int open_font_with_fallback()
+static int open_font_with_fallback(const char *font_name)
 {
     font = xcb_generate_id(connection);
 
-    if (open_font(XCB_FONT_NAME) && open_font("-misc-*") && open_font("fixed")) {
+    if (open_font(font_name) && open_font("-misc-*") && open_font("fixed")) {
         LOG("unable to find a fallback font\n");
         return 1;
     }
@@ -335,7 +335,7 @@ static int open_font_with_fallback()
     return 0;
 }
 
-int xcb_init()
+int xcb_init(const char *font_name)
 {
     connection = xcb_connect(NULL, NULL);
     if (xcb_connection_has_error(connection))
@@ -344,7 +344,7 @@ int xcb_init()
         return 1;
     }
 
-    if (open_font_with_fallback())
+    if (open_font_with_fallback(font_name))
     {
         xcb_disconnect(connection);
         return 1;

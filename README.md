@@ -27,11 +27,13 @@ Or to print the window id and use it with other commands, like xkill:
 
 ```
 Usage: i3-easyfocus <options>
- -i    print con id, does not change focus
- -w    print window id, does not change focus
- -a    label visible windows on all outputs
- -c    label visible windows within current container
- -r    rapid mode, keep on running until Escape is pressed
+ -h                 show this message
+ -i                 print con id, does not change focus
+ -w                 print window id, does not change focus
+ -a                 label visible windows on all outputs
+ -c                 label visible windows within current container
+ -r                 rapid mode, keep on running until Escape is pressed
+ -f <font-name>     set font name, see `xlsfonts` for available fonts
 ```
 
 You can change the keybindings and the font in ```src/config.h```.

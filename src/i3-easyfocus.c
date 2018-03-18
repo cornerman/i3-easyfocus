@@ -12,13 +12,27 @@ static int print_id = 0;
 static int window_id = 0;
 static int rapid_mode = 0;
 static SearchArea search_area = CURRENT_OUTPUT;
+static char* font_name = XCB_DEFAULT_FONT_NAME;
 
-int parse_args(int argc, char *argv[])
+static void print_help() {
+    printf("Usage: i3-easyfocus <options>\n");
+    printf(" -h                 show this message\n");
+    printf(" -i                 print con id, does not change focus\n");
+    printf(" -w                 print window id, does not change focus\n");
+    printf(" -a                 label visible windows on all outputs\n");
+    printf(" -c                 label visible windows within current container\n");
+    printf(" -r                 rapid mode, keep on running until Escape is pressed\n");
+    printf(" -f <font-name>     set font name, see `xlsfonts` for available fonts\n");
+}
+
+static int parse_args(int argc, char *argv[])
 {
     while ((argc > 1) && (argv[1][0] == '-'))
     {
         switch (argv[1][1])
         {
+        case 'h':
+            return 1;
         case 'i':
             print_id = 1;
             window_id = 0;
@@ -36,13 +50,18 @@ int parse_args(int argc, char *argv[])
         case 'r':
             rapid_mode = 1;
             break;
+        case 'f':
+            if (argc > 2) {
+                font_name = argv[2];
+                ++argv;
+                --argc;
+                break;
+            } else {
+                fprintf(stderr, "option '-f' needs argument <font-name>\n");
+                return 1;
+            }
         default:
-            printf("Usage: i3-easyfocus <options>\n");
-            printf(" -i    print con id, does not change focus\n");
-            printf(" -w    print window id, does not change focus\n");
-            printf(" -a    label visible windows on all outputs\n");
-            printf(" -c    label visible windows within current container\n");
-            printf(" -r    rapid mode, keep on running until Escape is pressed\n");
+            fprintf(stderr, "unknown option '-%c'\n", argv[1][1]);
             return 1;
         }
 
@@ -130,7 +149,7 @@ static int handle_selection(xcb_keysym_t selection)
 
 static int setup_xcb()
 {
-    if (xcb_init())
+    if (xcb_init(font_name))
     {
         fprintf(stderr, "error initializing xcb\n");
         return 1;
@@ -210,6 +229,7 @@ int main(int argc, char *argv[])
 {
     if (parse_args(argc, argv))
     {
+        print_help();
         return 1;
     }
 

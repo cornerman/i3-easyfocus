@@ -183,10 +183,19 @@ static Window *visible_windows_on_curr_output(i3ipcCon *root)
     return visible_windows(con);
 }
 
+static gint compare_workspace_nums (gconstpointer a, gconstpointer b)
+{
+    const i3ipcWorkspaceReply *reply_a = (i3ipcWorkspaceReply*) a;
+    const i3ipcWorkspaceReply *reply_b = (i3ipcWorkspaceReply*) b;
+
+    return reply_a->num - reply_b->num;
+}
+
 static Window *visible_windows_on_all_outputs(i3ipcCon *root)
 {
     GSList *raw_replies = i3ipc_connection_get_workspaces(connection, NULL);
     GSList *replies = g_slist_reverse(raw_replies); // i3ipc-glib reverses the order internally
+    replies = g_slist_sort(replies, compare_workspace_nums);
     GList *workspaces = i3ipc_con_workspaces(root);
 
     Window *res = NULL;

@@ -5,6 +5,8 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <string.h>
+#include <getopt.h>
 #include <X11/keysym.h>
 #include <X11/keysymdef.h>
 
@@ -14,26 +16,39 @@ static int rapid_mode = 0;
 static SearchArea search_area = CURRENT_OUTPUT;
 static char *font_name = XCB_DEFAULT_FONT_NAME;
 
-static void print_help()
+static void print_help(void)
 {
-    printf("Usage: i3-easyfocus <options>\n");
-    printf(" -h                 show this message\n");
-    printf(" -i                 print con id, does not change focus\n");
-    printf(" -w                 print window id, does not change focus\n");
-    printf(" -a                 label visible windows on all outputs\n");
-    printf(" -c                 label visible windows within current container\n");
-    printf(" -r                 rapid mode, keep on running until Escape is pressed\n");
-    printf(" -f <font-name>     set font name, see `xlsfonts` for available fonts\n");
+    fprintf(stderr, "Usage: i3-easyfocus <options>\n");
+    fprintf(stderr, " -h --help              show this message\n");
+    fprintf(stderr, " -i --con-id            print con id, does not change focus\n");
+    fprintf(stderr, " -w --window-id         print window id, does not change focus\n");
+    fprintf(stderr, " -a --all               label visible windows on all outputs\n");
+    fprintf(stderr, " -c --current           label visible windows within current container\n");
+    fprintf(stderr, " -r --rapid             rapid mode, keep on running until Escape is pressed\n");
+    fprintf(stderr, " -f --font <font-name>  set font name, see `xlsfonts` for available fonts\n");
 }
 
-static int parse_args(int argc, char *argv[])
+static void parse_args(int argc, char *argv[])
 {
-    while ((argc > 1) && (argv[1][0] == '-'))
+    static struct option long_options[] = {
+        {"con-id", no_argument, 0, 'i'},
+        {"window-id", no_argument, 0, 'w'},
+        {"all", no_argument, 0, 'a'},
+        {"current", no_argument, 0, 'c'},
+        {"rapid", no_argument, 0, 'r'},
+        {"font", required_argument, 0, 'f'},
+        {"help", no_argument, 0, 'h'},
+        {0, 0, 0, 0}};
+    char *options_string = "iwacrf:h";
+    int o, option_index;
+
+    while ((o = getopt_long(argc, argv, options_string, long_options, &option_index)) != -1)
     {
-        switch (argv[1][1])
+        switch (o)
         {
         case 'h':
-            return 1;
+            print_help();
+            exit(0);
         case 'i':
             print_id = 1;
             window_id = 0;
@@ -52,27 +67,13 @@ static int parse_args(int argc, char *argv[])
             rapid_mode = 1;
             break;
         case 'f':
-            if (argc > 2)
-            {
-                font_name = argv[2];
-                ++argv;
-                --argc;
-                break;
-            }
-            else
-            {
-                fprintf(stderr, "option '-f' needs argument <font-name>\n");
-                return 1;
-            }
+            font_name = strdup(optarg);
+            break;
         default:
-            fprintf(stderr, "unknown option '-%c'\n", argv[1][1]);
-            return 1;
+            print_help();
+            exit(EXIT_FAILURE);
         }
-
-        ++argv;
-        --argc;
     }
-    return 0;
 }
 
 static int create_window_label(Window *win)
@@ -231,11 +232,7 @@ static int select_window()
 
 int main(int argc, char *argv[])
 {
-    if (parse_args(argc, argv))
-    {
-        print_help();
-        return 1;
-    }
+    parse_args(argc, argv);
 
     if (ipc_init())
     {

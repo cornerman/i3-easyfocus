@@ -33,6 +33,9 @@ Usage: i3-easyfocus <options>
  -a --all               label visible windows on all outputs
  -c --current           label visible windows within current container
  -r --rapid             rapid mode, keep on running until Escape is pressed
+ -s --sort-by <method>  how to sort the workspaces' labels when using --all:
+                            - <location> based on their location (default)
+                            - <num> using the workspaces' numbers
  -f --font <font-name>  set font name, see `xlsfonts` for available fonts
 ```
 

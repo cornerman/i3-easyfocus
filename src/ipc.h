@@ -9,8 +9,13 @@ typedef enum {
     CURRENT_CONTAINER
 } SearchArea;
 
+typedef enum {
+    BY_LOCATION,
+    BY_NUMBER
+} SortMethod;
+
 int ipc_init();
-Window *ipc_visible_windows(SearchArea search_area);
+Window *ipc_visible_windows(SearchArea search_area, SortMethod sort_method);
 int ipc_focus_window(Window *window);
 void ipc_finish();
 

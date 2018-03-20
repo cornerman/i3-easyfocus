@@ -16,7 +16,7 @@ void map_init()
     current = 0;
 }
 
-xcb_keysym_t map_add(Window* win)
+xcb_keysym_t map_add(Window *win)
 {
     if (current >= LENGTH)
     {

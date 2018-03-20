@@ -12,9 +12,10 @@ static int print_id = 0;
 static int window_id = 0;
 static int rapid_mode = 0;
 static SearchArea search_area = CURRENT_OUTPUT;
-static char* font_name = XCB_DEFAULT_FONT_NAME;
+static char *font_name = XCB_DEFAULT_FONT_NAME;
 
-static void print_help() {
+static void print_help()
+{
     printf("Usage: i3-easyfocus <options>\n");
     printf(" -h                 show this message\n");
     printf(" -i                 print con id, does not change focus\n");
@@ -51,12 +52,15 @@ static int parse_args(int argc, char *argv[])
             rapid_mode = 1;
             break;
         case 'f':
-            if (argc > 2) {
+            if (argc > 2)
+            {
                 font_name = argv[2];
                 ++argv;
                 --argc;
                 break;
-            } else {
+            }
+            else
+            {
                 fprintf(stderr, "option '-f' needs argument <font-name>\n");
                 return 1;
             }
@@ -206,7 +210,8 @@ static int select_window()
             if (selection == EXIT_KEYSYM)
             {
                 searching = 0;
-            } else if (selection != EXIT_KEYSYM)
+            }
+            else if (selection != EXIT_KEYSYM)
             {
                 if (handle_selection(selection))
                 {
@@ -216,7 +221,6 @@ static int select_window()
 
                 searching = rapid_mode;
             }
-
         }
 
         window_free(win);
@@ -248,4 +252,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-

@@ -10,7 +10,9 @@ Window *window_append(Window *win, Window *item)
     }
 
     Window *ptr;
-    for (ptr = win; ptr->next != NULL; ptr = ptr->next) {}
+    for (ptr = win; ptr->next != NULL; ptr = ptr->next)
+    {
+    }
     ptr->next = item;
     return win;
 }

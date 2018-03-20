@@ -30,14 +30,13 @@ static int request_failed(xcb_void_cookie_t cookie, char *err_msg)
 
 static int grab_keycode_with_mod(xcb_keycode_t keycode, uint16_t mod_mask)
 {
-    xcb_void_cookie_t cookie = xcb_grab_key_checked(
-                                   connection,
-                                   1,
-                                   screen->root,
-                                   mod_mask,
-                                   keycode,
-                                   XCB_GRAB_MODE_ASYNC,
-                                   XCB_GRAB_MODE_ASYNC);
+    xcb_void_cookie_t cookie = xcb_grab_key_checked(connection,
+                                                    1,
+                                                    screen->root,
+                                                    mod_mask,
+                                                    keycode,
+                                                    XCB_GRAB_MODE_ASYNC,
+                                                    XCB_GRAB_MODE_ASYNC);
 
     return request_failed(cookie, "cannot grab key");
 }
@@ -45,9 +44,9 @@ static int grab_keycode_with_mod(xcb_keycode_t keycode, uint16_t mod_mask)
 static int grab_keycode(xcb_keycode_t keycode)
 {
     LOG("grab key (keycode: %i)\n", keycode);
-    return grab_keycode_with_mod(keycode, 0) // key
-           || grab_keycode_with_mod(keycode, XCB_MOD_MASK_2) // key with numlock
-           || grab_keycode_with_mod(keycode, XCB_MOD_MASK_LOCK) // key with capslock
+    return grab_keycode_with_mod(keycode, 0)                                      // key
+           || grab_keycode_with_mod(keycode, XCB_MOD_MASK_2)                      // key with numlock
+           || grab_keycode_with_mod(keycode, XCB_MOD_MASK_LOCK)                   // key with capslock
            || grab_keycode_with_mod(keycode, XCB_MOD_MASK_2 | XCB_MOD_MASK_LOCK); // key with numlock and capslock
 }
 
@@ -90,16 +89,15 @@ static int draw_text(xcb_window_t window, int16_t x, int16_t y, const char *labe
 {
     xcb_gcontext_t gc = xcb_generate_id(connection);
     uint32_t mask = XCB_GC_FOREGROUND | XCB_GC_BACKGROUND | XCB_GC_FONT;
-    uint32_t value_list[3] = { screen->black_pixel,
-                               screen->white_pixel,
-                               font
-                             };
+    uint32_t value_list[3] = {screen->black_pixel,
+                              screen->white_pixel,
+                              font};
 
     xcb_void_cookie_t gc_cookie = xcb_create_gc_checked(connection,
-                                  gc,
-                                  window,
-                                  mask,
-                                  value_list);
+                                                        gc,
+                                                        window,
+                                                        mask,
+                                                        value_list);
 
     if (request_failed(gc_cookie, "cannot open gc"))
     {
@@ -107,11 +105,11 @@ static int draw_text(xcb_window_t window, int16_t x, int16_t y, const char *labe
     }
 
     xcb_void_cookie_t text_cookie = xcb_image_text_8_checked(connection,
-                                    strlen(label),
-                                    window,
-                                    gc,
-                                    x, y,
-                                    label);
+                                                             strlen(label),
+                                                             window,
+                                                             gc,
+                                                             x, y,
+                                                             label);
 
     if (request_failed(text_cookie, "cannot paste text"))
     {
@@ -140,15 +138,20 @@ int xcb_create_text_window(int pos_x, int pos_y, const char *label)
     values[1] = XCB_EVENT_MASK_EXPOSURE;
 
     LOG("create window (id: %u, x: %i, y: %i): %s\n", window, pos_x, pos_y, label);
-    xcb_void_cookie_t window_cookie = xcb_create_window_checked(connection,
-                                      screen->root_depth,
-                                      window, screen->root,
-                                      pos_x, pos_y,
-                                      width + 2,
-                                      font_info->font_ascent + font_info->font_descent,
-                                      0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
-                                      screen->root_visual,
-                                      mask, values);
+    xcb_void_cookie_t window_cookie =
+        xcb_create_window_checked(connection,
+                                  screen->root_depth,
+                                  window,
+                                  screen->root,
+                                  pos_x,
+                                  pos_y,
+                                  width + 2,
+                                  font_info->font_ascent + font_info->font_descent,
+                                  0,
+                                  XCB_WINDOW_CLASS_INPUT_OUTPUT,
+                                  screen->root_visual,
+                                  mask,
+                                  values);
 
     if (request_failed(window_cookie, "cannot create window"))
     {
@@ -171,7 +174,7 @@ int xcb_create_text_window(int pos_x, int pos_y, const char *label)
 
     xcb_flush(connection);
 
-    xcb_generic_event_t  *event;
+    xcb_generic_event_t *event;
     while (1)
     {
         if ((event = xcb_poll_for_event(connection)))
@@ -229,13 +232,15 @@ int xcb_grab_keysym(xcb_keysym_t keysym)
 
         LOG("translated keysym '%i' to keycode '%i'\n", keysym, i);
         foundCode = 1;
-        if (grab_keycode(i)) {
+        if (grab_keycode(i))
+        {
             LOG("failed to grab keycode '%i'\n", i);
             return 1;
         }
     }
 
-    if (foundCode) {
+    if (foundCode)
+    {
         return 0;
     }
 
@@ -254,7 +259,7 @@ xcb_keysym_t xcb_wait_for_user_input()
         {
         case XCB_KEY_PRESS:
         {
-            xcb_key_press_event_t *kp = (xcb_key_press_event_t *)event;
+            xcb_key_press_event_t *kp = (xcb_key_press_event_t *) event;
 
             xcb_keysym_t sym = xcb_key_press_lookup_keysym(keysyms, kp, 0);
             LOG("key press event (keycode: %i, keysym: %i)\n", kp->detail, sym);
@@ -272,7 +277,8 @@ xcb_keysym_t xcb_wait_for_user_input()
         case XCB_FOCUS_OUT:
         {
             LOG("focus out event\n");
-            if (focused_in) {
+            if (focused_in)
+            {
                 free(event);
                 return XCB_NO_SYMBOL;
             }
@@ -299,9 +305,9 @@ int xcb_register_configure_notify()
     uint32_t values[1];
     values[0] = XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY | XCB_EVENT_MASK_FOCUS_CHANGE;
     xcb_void_cookie_t cookie = xcb_change_window_attributes_checked(connection,
-                               screen->root,
-                               mask,
-                               values);
+                                                                    screen->root,
+                                                                    mask,
+                                                                    values);
 
     if (request_failed(cookie, "cannot register for events on root window"))
     {
@@ -316,9 +322,9 @@ static int open_font(const char *font_pattern)
 {
     LOG("trying to open font: %s\n", font_pattern);
     xcb_void_cookie_t cookie = xcb_open_font_checked(connection,
-                               font,
-                               strlen(font_pattern),
-                               font_pattern);
+                                                     font,
+                                                     strlen(font_pattern),
+                                                     font_pattern);
 
     return request_failed(cookie, "cannot open font");
 }
@@ -327,7 +333,8 @@ static int open_font_with_fallback(const char *font_name)
 {
     font = xcb_generate_id(connection);
 
-    if (open_font(font_name) && open_font("-misc-*") && open_font("fixed")) {
+    if (open_font(font_name) && open_font("-misc-*") && open_font("fixed"))
+    {
         LOG("unable to find a fallback font\n");
         return 1;
     }

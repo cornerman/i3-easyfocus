@@ -1,0 +1,13 @@
+BasedOnStyle: LLVM
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: false
+AlwaysBreakBeforeMultilineStrings: false
+IndentWidth: 4
+AlignAfterOpenBracket: Align
+PointerBindsToType: false
+BreakBeforeBraces: Allman
+SpaceAfterCStyleCast: true
+ColumnLimit: 0
+SortIncludes: false

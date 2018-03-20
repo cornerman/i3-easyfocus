@@ -121,8 +121,8 @@ static Window *visible_windows(i3ipcCon *root)
 
     Window *res = NULL;
     const GList *elem;
-    if ((strcmp(layout, "tabbed") == 0)
-            || (strcmp(layout, "stacked") == 0))
+    if ((strcmp(layout, "tabbed") == 0) ||
+        (strcmp(layout, "stacked") == 0))
     {
         unsigned long focus_id = con_get_focused_id(root);
         for (elem = nodes; elem; elem = elem->next)
@@ -147,8 +147,8 @@ static Window *visible_windows(i3ipcCon *root)
             res = window_append(res, win);
         }
     }
-    else if ((strcmp(layout, "splith") == 0)
-             || (strcmp(layout, "splitv") == 0))
+    else if ((strcmp(layout, "splith") == 0) ||
+             (strcmp(layout, "splitv") == 0))
     {
         for (elem = nodes; elem; elem = elem->next)
         {
@@ -183,10 +183,10 @@ static Window *visible_windows_on_curr_output(i3ipcCon *root)
     return visible_windows(con);
 }
 
-static gint compare_workspace_nums (gconstpointer a, gconstpointer b)
+static gint compare_workspace_nums(gconstpointer a, gconstpointer b)
 {
-    const i3ipcWorkspaceReply *reply_a = (i3ipcWorkspaceReply*) a;
-    const i3ipcWorkspaceReply *reply_b = (i3ipcWorkspaceReply*) b;
+    const i3ipcWorkspaceReply *reply_a = (i3ipcWorkspaceReply *) a;
+    const i3ipcWorkspaceReply *reply_b = (i3ipcWorkspaceReply *) b;
 
     return reply_a->num - reply_b->num;
 }

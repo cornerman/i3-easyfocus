@@ -5,6 +5,7 @@
 #include "config.h"
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <getopt.h>
 #include <X11/keysym.h>
@@ -14,6 +15,7 @@ static int print_id = 0;
 static int window_id = 0;
 static int rapid_mode = 0;
 static SearchArea search_area = CURRENT_OUTPUT;
+static SortMethod sort_method = BY_LOCATION;
 static char *font_name = XCB_DEFAULT_FONT_NAME;
 
 static void print_help(void)
@@ -25,6 +27,9 @@ static void print_help(void)
     fprintf(stderr, " -a --all               label visible windows on all outputs\n");
     fprintf(stderr, " -c --current           label visible windows within current container\n");
     fprintf(stderr, " -r --rapid             rapid mode, keep on running until Escape is pressed\n");
+    fprintf(stderr, " -s --sort-by <method>  how to sort the workspaces' labels when using --all:\n");
+    fprintf(stderr, "                            - <location> based on their location (default)\n");
+    fprintf(stderr, "                            - <num> using the workspaces' numbers\n");
     fprintf(stderr, " -f --font <font-name>  set font name, see `xlsfonts` for available fonts\n");
 }
 
@@ -37,11 +42,13 @@ static void parse_args(int argc, char *argv[])
         {"current", no_argument, 0, 'c'},
         {"rapid", no_argument, 0, 'r'},
         {"font", required_argument, 0, 'f'},
+        {"sort-by", required_argument, 0, 's'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}};
-    char *options_string = "iwacrf:h";
+    char *options_string = "iwacrf:s:h";
     int o, option_index;
 
+    bool got_sort_method = false;
     while ((o = getopt_long(argc, argv, options_string, long_options, &option_index)) != -1)
     {
         switch (o)
@@ -69,11 +76,28 @@ static void parse_args(int argc, char *argv[])
         case 'f':
             font_name = strdup(optarg);
             break;
+        case 's':
+            got_sort_method = true;
+            if (strcmp(optarg, "num") == 0)
+            {
+                sort_method = BY_NUMBER;
+                break;
+            }
+            else if (strcmp(optarg, "location") == 0)
+            {
+                sort_method = BY_LOCATION;
+                break;
+            }
+            else
+                fprintf(stderr, "wrong type of sort method: %s\n", optarg);
+            // fallthrough
         default:
             print_help();
             exit(EXIT_FAILURE);
         }
     }
+    if (got_sort_method && search_area != ALL_OUTPUTS)
+        fprintf(stderr, "warning: ignoring provided --sort-by argument, use the --all flag.\n");
 }
 
 static int create_window_label(Window *win)
@@ -189,7 +213,7 @@ static int select_window()
             return 1;
         }
 
-        Window *win = ipc_visible_windows(search_area);
+        Window *win = ipc_visible_windows(search_area, sort_method);
         if (win == NULL)
         {
             fprintf(stderr, "no visible windows\n");

@@ -183,6 +183,44 @@ static Window *visible_windows_on_curr_output(i3ipcCon *root)
     return visible_windows(con);
 }
 
+static gint compare_rects(i3ipcRect *a, i3ipcRect *b)
+{
+    return a->y == b->y ? a->x - b->x : a->y - b->y;
+}
+
+static gint compare_workspace_position(gconstpointer a, gconstpointer b, gpointer outputs_)
+{
+    const i3ipcWorkspaceReply *reply_a = (i3ipcWorkspaceReply *) a;
+    const i3ipcWorkspaceReply *reply_b = (i3ipcWorkspaceReply *) b;
+
+    if (g_str_equal(reply_a->output, reply_b->output))
+        return 0;
+
+    i3ipcRect *rect_a = NULL;
+    i3ipcRect *rect_b = NULL;
+    GSList *outputs = (GSList *) outputs_;
+    const GSList *output_reply;
+    for (output_reply = outputs; output_reply; output_reply = output_reply->next)
+    {
+        i3ipcOutputReply *output = output_reply->data;
+
+        if (g_str_equal(output->name, reply_a->output))
+            rect_a = output->rect;
+        else if (g_str_equal(output->name, reply_b->output))
+            rect_b = output->rect;
+
+        if (rect_a && rect_b)
+            break;
+    }
+    if (!rect_a || !rect_b)
+    {
+        const i3ipcWorkspaceReply *unassigned_workspace = rect_a ? reply_a : reply_b;
+        LOG("output %s for workspace %s not found\n", unassigned_workspace->output, unassigned_workspace->name);
+        return 0;
+    }
+    return compare_rects(rect_a, rect_b);
+}
+
 static gint compare_workspace_nums(gconstpointer a, gconstpointer b)
 {
     const i3ipcWorkspaceReply *reply_a = (i3ipcWorkspaceReply *) a;
@@ -191,11 +229,22 @@ static gint compare_workspace_nums(gconstpointer a, gconstpointer b)
     return reply_a->num - reply_b->num;
 }
 
-static Window *visible_windows_on_all_outputs(i3ipcCon *root)
+static Window *visible_windows_on_all_outputs(i3ipcCon *root, SortMethod sort_method)
 {
     GSList *raw_replies = i3ipc_connection_get_workspaces(connection, NULL);
     GSList *replies = g_slist_reverse(raw_replies); // i3ipc-glib reverses the order internally
-    replies = g_slist_sort(replies, compare_workspace_nums);
+
+    if (sort_method == BY_NUMBER)
+    {
+        replies = g_slist_sort(replies, compare_workspace_nums);
+    }
+    else if (sort_method == BY_LOCATION)
+    {
+        GSList *outputs = i3ipc_connection_get_outputs(connection, NULL);
+        replies = g_slist_sort_with_data(replies, compare_workspace_position, outputs);
+        g_slist_free_full(outputs, (GDestroyNotify) i3ipc_output_reply_free);
+    }
+
     GList *workspaces = i3ipc_con_workspaces(root);
 
     Window *res = NULL;
@@ -245,7 +294,7 @@ static Window *visible_windows_in_curr_con(i3ipcCon *root)
     return visible_windows(con);
 }
 
-Window *ipc_visible_windows(SearchArea search_area)
+Window *ipc_visible_windows(SearchArea search_area, SortMethod sort_method)
 {
     i3ipcCon *root = i3ipc_connection_get_tree(connection, NULL);
     if (root == NULL)
@@ -261,7 +310,7 @@ Window *ipc_visible_windows(SearchArea search_area)
         windows = visible_windows_on_curr_output(root);
         break;
     case ALL_OUTPUTS:
-        windows = visible_windows_on_all_outputs(root);
+        windows = visible_windows_on_all_outputs(root, sort_method);
         break;
     case CURRENT_CONTAINER:
         windows = visible_windows_in_curr_con(root);

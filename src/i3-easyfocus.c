@@ -17,6 +17,7 @@ static int rapid_mode = 0;
 static SearchArea search_area = CURRENT_OUTPUT;
 static SortMethod sort_method = BY_LOCATION;
 static char *font_name = XCB_DEFAULT_FONT_NAME;
+static label_key_mode_e key_mode = LABEL_KEY_MODE_DEFAULT;
 
 static void print_help(void)
 {
@@ -31,6 +32,9 @@ static void print_help(void)
     fprintf(stderr, "                            - <location> based on their location (default)\n");
     fprintf(stderr, "                            - <num> using the workspaces' numbers\n");
     fprintf(stderr, " -f --font <font-name>  set font name, see `xlsfonts` for available fonts\n");
+    fprintf(stderr, " -k --keys <mode>       set the labeling keys to use, avy or alpha\n");
+    fprintf(stderr, "                            - \"avy\" (default) prefers home row\n");
+    fprintf(stderr, "                            - \"alpha\" orders alphabetically\n");
 }
 
 static void parse_args(int argc, char *argv[])
@@ -44,8 +48,9 @@ static void parse_args(int argc, char *argv[])
         {"font", required_argument, 0, 'f'},
         {"sort-by", required_argument, 0, 's'},
         {"help", no_argument, 0, 'h'},
+        {"keys", required_argument, 0, 'k'},
         {0, 0, 0, 0}};
-    char *options_string = "iwacrf:s:h";
+    char *options_string = "iwacrf:s:hk:";
     int o, option_index;
 
     bool got_sort_method = false;
@@ -76,6 +81,22 @@ static void parse_args(int argc, char *argv[])
         case 'f':
             font_name = strdup(optarg);
             break;
+        case 'k':
+	        if (strcmp(optarg, "avy") == 0)
+		    {
+			    key_mode = LABEL_KEY_MODE_AVY;
+		    }
+	        else if (strcmp(optarg, "alpha") == 0)
+		    {
+			    key_mode = LABEL_KEY_MODE_ALPHA;
+		    }
+	        else
+		    {
+			    fprintf(stderr, "unrecognized key style type: %s\n", optarg);
+			    print_help();
+			    exit(EXIT_FAILURE);
+		    }
+	        break;
         case 's':
             got_sort_method = true;
             if (strcmp(optarg, "num") == 0)
@@ -135,7 +156,7 @@ static int create_window_label(Window *win)
 
 static int create_window_labels(Window *win)
 {
-    map_init();
+    map_init(key_mode);
     Window *curr = win;
     while (curr != NULL)
     {
@@ -222,6 +243,7 @@ static int select_window()
 
         if (create_window_labels(win))
         {
+	        map_deinit();
             window_free(win);
             return 1;
         }
@@ -240,6 +262,7 @@ static int select_window()
             {
                 if (handle_selection(selection))
                 {
+	                map_deinit();
                     window_free(win);
                     return 1;
                 }
@@ -248,6 +271,7 @@ static int select_window()
             }
         }
 
+        map_deinit();
         window_free(win);
     }
 

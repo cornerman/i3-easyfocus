@@ -6,12 +6,12 @@
 
 typedef enum
 {
-	LABEL_KEY_MODE_AVY,
-	LABEL_KEY_MODE_ALPHA,
+    LABEL_KEY_MODE_AVY,
+    LABEL_KEY_MODE_ALPHA,
 
-	LABEL_KEY_MODE_DEFAULT = LABEL_KEY_MODE_AVY,
-	
-	LABEL_KEY_MODE_MAX,
+    LABEL_KEY_MODE_DEFAULT = LABEL_KEY_MODE_AVY,
+    
+    LABEL_KEY_MODE_MAX,
 } label_key_mode_e;
 
 void map_init(label_key_mode_e mode);

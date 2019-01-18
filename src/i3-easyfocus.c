@@ -82,21 +82,21 @@ static void parse_args(int argc, char *argv[])
             font_name = strdup(optarg);
             break;
         case 'k':
-	        if (strcmp(optarg, "avy") == 0)
-		    {
-			    key_mode = LABEL_KEY_MODE_AVY;
-		    }
-	        else if (strcmp(optarg, "alpha") == 0)
-		    {
-			    key_mode = LABEL_KEY_MODE_ALPHA;
-		    }
-	        else
-		    {
-			    fprintf(stderr, "unrecognized key style type: %s\n", optarg);
-			    print_help();
-			    exit(EXIT_FAILURE);
-		    }
-	        break;
+            if (strcmp(optarg, "avy") == 0)
+            {
+                key_mode = LABEL_KEY_MODE_AVY;
+            }
+            else if (strcmp(optarg, "alpha") == 0)
+            {
+                key_mode = LABEL_KEY_MODE_ALPHA;
+            }
+            else
+            {
+                fprintf(stderr, "unrecognized key style type: %s\n", optarg);
+                print_help();
+                exit(EXIT_FAILURE);
+            }
+            break;
         case 's':
             got_sort_method = true;
             if (strcmp(optarg, "num") == 0)
@@ -243,7 +243,7 @@ static int select_window()
 
         if (create_window_labels(win))
         {
-	        map_deinit();
+            map_deinit();
             window_free(win);
             return 1;
         }
@@ -262,7 +262,7 @@ static int select_window()
             {
                 if (handle_selection(selection))
                 {
-	                map_deinit();
+                    map_deinit();
                     window_free(win);
                     return 1;
                 }

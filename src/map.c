@@ -23,16 +23,16 @@ void map_init(label_key_mode_e mode)
     current = 0;
 
     switch(mode)
-	{
-	case LABEL_KEY_MODE_AVY:
-		label_keysyms = label_avy_keysyms;
-		map_length = LENGTH_AVY;
-		break;
-	case LABEL_KEY_MODE_ALPHA:
-		label_keysyms = label_alpha_keysyms;
-		map_length = LENGTH_ALPHA;
-		break;
-	}
+    {
+    case LABEL_KEY_MODE_AVY:
+        label_keysyms = label_avy_keysyms;
+        map_length = LENGTH_AVY;
+        break;
+    case LABEL_KEY_MODE_ALPHA:
+        label_keysyms = label_alpha_keysyms;
+        map_length = LENGTH_ALPHA;
+        break;
+    }
     win_map = calloc(map_length, sizeof(Window*));
 }
 
@@ -67,8 +67,8 @@ Window *map_get(xcb_keysym_t keysym)
 
 void map_deinit()
 {
-	free(win_map);
-	win_map = NULL;
-	map_length = 0;
-	current = 0;
+    free(win_map);
+    win_map = NULL;
+    map_length = 0;
+    current = 0;
 }

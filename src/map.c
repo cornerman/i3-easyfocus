@@ -65,7 +65,7 @@ Window *map_get(xcb_keysym_t keysym)
     return NULL;
 }
 
-void map_deinit()
+void map_free()
 {
     free(win_map);
     win_map = NULL;

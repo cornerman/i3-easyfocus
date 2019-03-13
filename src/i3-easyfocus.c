@@ -243,7 +243,7 @@ static int select_window()
 
         if (create_window_labels(win))
         {
-            map_deinit();
+            map_free();
             window_free(win);
             return 1;
         }
@@ -262,7 +262,7 @@ static int select_window()
             {
                 if (handle_selection(selection))
                 {
-                    map_deinit();
+                    map_free();
                     window_free(win);
                     return 1;
                 }
@@ -271,7 +271,7 @@ static int select_window()
             }
         }
 
-        map_deinit();
+        map_free();
         window_free(win);
     }
 

@@ -33,6 +33,9 @@ Usage: i3-easyfocus <options>
  -a --all               label visible windows on all outputs
  -c --current           label visible windows within current container
  -r --rapid             rapid mode, keep on running until Escape is pressed
+ -m --modifier <mod>    listen to keycombo <mod>+<label> instead of only <label>
+                            - ctrl, shift, mod1, mod2, mod3, mod4, mod5
+                            - or combine with, e.g., mod1+shift
  -s --sort-by <method>  how to sort the workspaces' labels when using --all:
                             - <location> based on their location (default)
                             - <num> using the workspaces' numbers

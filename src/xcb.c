@@ -49,13 +49,13 @@ static int grab_keycode_with_mod(xcb_keycode_t keycode, uint16_t mod_mask)
     return request_failed(cookie, "cannot grab key");
 }
 
-static int grab_keycode(xcb_keycode_t keycode)
+static int grab_keycode(xcb_keycode_t keycode, uint16_t mod_mask)
 {
     LOG("grab key (keycode: %i)\n", keycode);
-    return grab_keycode_with_mod(keycode, 0)                                      // key
-           || grab_keycode_with_mod(keycode, XCB_MOD_MASK_2)                      // key with numlock
-           || grab_keycode_with_mod(keycode, XCB_MOD_MASK_LOCK)                   // key with capslock
-           || grab_keycode_with_mod(keycode, XCB_MOD_MASK_2 | XCB_MOD_MASK_LOCK); // key with numlock and capslock
+    return grab_keycode_with_mod(keycode, mod_mask)                                          // key
+           || grab_keycode_with_mod(keycode, mod_mask | XCB_MOD_MASK_2)                      // key with numlock
+           || grab_keycode_with_mod(keycode, mod_mask | XCB_MOD_MASK_LOCK)                   // key with capslock
+           || grab_keycode_with_mod(keycode, mod_mask | XCB_MOD_MASK_2 | XCB_MOD_MASK_LOCK); // key with numlock and capslock
 }
 
 static xcb_char2b_t *string_to_char2b(const char *text, size_t len)
@@ -248,9 +248,51 @@ char *xcb_keysym_to_string(xcb_keysym_t keysym)
     return key_buf;
 }
 
-int xcb_grab_keysym(xcb_keysym_t keysym)
+
+
+static uint16_t modifier_string_to_mask_fn(char *modifier, size_t size)
 {
-    LOG("try to grab key (keysym: %i)\n", keysym);
+    if (strncmp(modifier, "ctrl", size) == 0)
+        return XCB_MOD_MASK_CONTROL;
+    else if (strncmp(modifier, "shift", size) == 0)
+        return XCB_MOD_MASK_SHIFT;
+    else if (strncmp(modifier, "mod1", size) == 0)
+        return XCB_MOD_MASK_1;
+    else if (strncmp(modifier, "mod2", size) == 0)
+        return XCB_MOD_MASK_2;
+    else if (strncmp(modifier, "mod3", size) == 0)
+        return XCB_MOD_MASK_3;
+    else if (strncmp(modifier, "mod4", size) == 0)
+        return XCB_MOD_MASK_4;
+    else if (strncmp(modifier, "mod5", size) == 0)
+        return XCB_MOD_MASK_5;
+
+    LOG("unknown modifier: %s. will be ignored.\n", modifier);
+    return 0;
+}
+
+uint16_t xcb_modifier_string_to_mask(char *modifier)
+{
+    uint16_t mod_mask = 0;
+    int start = 0;
+    int len = strlen(modifier);
+    for (int i = 0; i < len; i++)
+    {
+        if (modifier[i] == '+')
+        {
+            mod_mask |= modifier_string_to_mask_fn(modifier + start, i - start);
+            start = i+1;
+        }
+    }
+
+    mod_mask |= modifier_string_to_mask_fn(modifier + start, len - start);
+
+    return mod_mask;
+}
+
+int xcb_grab_keysym(xcb_keysym_t keysym, uint16_t mod_mask)
+{
+    LOG("try to grab key (keysym: %i, modifier: %i)\n", keysym, mod_mask);
     xcb_keycode_t min_keycode = xcb_get_setup(connection)->min_keycode;
     xcb_keycode_t max_keycode = xcb_get_setup(connection)->max_keycode;
 
@@ -265,7 +307,7 @@ int xcb_grab_keysym(xcb_keysym_t keysym)
 
         LOG("translated keysym '%i' to keycode '%i'\n", keysym, i);
         foundCode = 1;
-        if (grab_keycode(i))
+        if (grab_keycode(i, mod_mask))
         {
             LOG("failed to grab keycode '%i'\n", i);
             return 1;

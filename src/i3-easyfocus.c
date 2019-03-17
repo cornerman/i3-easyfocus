@@ -20,6 +20,7 @@ static SortMethod sort_method = BY_LOCATION;
 static char *font_name = XCB_DEFAULT_FONT_NAME;
 static label_key_mode_e key_mode = LABEL_KEY_MODE_DEFAULT;
 static ColorConfig color_config = { COLOR_DEFAULT_URGENT_BG, COLOR_DEFAULT_URGENT_FG, COLOR_DEFAULT_FOCUSED_BG, COLOR_DEFAULT_FOCUSED_FG, COLOR_DEFAULT_UNFOCUSED_BG, COLOR_DEFAULT_UNFOCUSED_FG };
+static uint16_t modifier_mask = 0;
 
 static void print_help(void)
 {
@@ -30,6 +31,9 @@ static void print_help(void)
     fprintf(stderr, " -a --all               label visible windows on all outputs\n");
     fprintf(stderr, " -c --current           label visible windows within current container\n");
     fprintf(stderr, " -r --rapid             rapid mode, keep on running until Escape is pressed\n");
+    fprintf(stderr, " -m --modifier <mod>    listen to keycombo <mod>+<label> instead of only <label>\n");
+    fprintf(stderr, "                            - ctrl, shift, mod1, mod2, mod3, mod4, mod5\n");
+    fprintf(stderr, "                            - or combine with, e.g., mod1+shift\n");
     fprintf(stderr, " -s --sort-by <method>  how to sort the workspaces' labels when using --all:\n");
     fprintf(stderr, "                            - <location> based on their location (default)\n");
     fprintf(stderr, "                            - <num> using the workspaces' numbers\n");
@@ -54,6 +58,7 @@ static void parse_args(int argc, char *argv[])
         {"current", no_argument, 0, 'c'},
         {"rapid", no_argument, 0, 'r'},
         {"font", required_argument, 0, 'f'},
+        {"modifier", required_argument, 0, 'm'},
         {"color-urgent-bg", required_argument, 0, 1000},
         {"color-focused-bg", required_argument, 0, 1001},
         {"color-unfocused-bg", required_argument, 0, 1002},
@@ -63,7 +68,7 @@ static void parse_args(int argc, char *argv[])
         {"help", no_argument, 0, 'h'},
         {"keys", required_argument, 0, 'k'},
         {0, 0, 0, 0}};
-    char *options_string = "iwacrf:s:hk:";
+    char *options_string = "iwacrf:s:hk:m:";
     int o, option_index;
 
     bool got_sort_method = false;
@@ -93,6 +98,9 @@ static void parse_args(int argc, char *argv[])
             break;
         case 'f':
             font_name = strdup(optarg);
+            break;
+        case 'm':
+            modifier_mask = xcb_modifier_string_to_mask(optarg);
             break;
         case 'k':
             if (strcmp(optarg, "avy") == 0)
@@ -182,7 +190,7 @@ static int create_window_label(Window *win)
         return 1;
     }
 
-    if (xcb_grab_keysym(key))
+    if (xcb_grab_keysym(key, modifier_mask))
     {
         fprintf(stderr, "cannot register for key event\n");
         return 1;
@@ -264,7 +272,7 @@ static int setup_xcb()
         return 1;
     }
 
-    if (xcb_grab_keysym(EXIT_KEYSYM))
+    if (xcb_grab_keysym(EXIT_KEYSYM, modifier_mask))
     {
         xcb_finish();
         fprintf(stderr, "cannot grab exit keysym\n");

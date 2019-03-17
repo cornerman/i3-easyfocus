@@ -37,6 +37,9 @@ Usage: i3-easyfocus <options>
                             - <location> based on their location (default)
                             - <num> using the workspaces' numbers
  -f --font <font-name>  set font name, see `xlsfonts` for available fonts
+ -k --keys <mode>       set the labeling keys to use, avy or alpha
+                            - "avy" (default) prefers home row
+                            - "alpha" orders alphabetically
 ```
 
 You can change the keybindings and the font in ```src/config.h```.

@@ -23,6 +23,12 @@ static Window *con_to_window(i3ipcCon *con)
     gboolean fullscreen;
     g_object_get(con, "fullscreen-mode", &fullscreen, NULL);
 
+    gboolean urgent;
+    g_object_get(con, "urgent", &urgent, NULL);
+
+    gboolean focused;
+    g_object_get(con, "focused", &focused, NULL);
+
     int x, y;
     if (fullscreen || (deco_rect->height == 0))
     {
@@ -58,6 +64,13 @@ static Window *con_to_window(i3ipcCon *con)
     window->position.x = x;
     window->position.y = y;
     window->next = NULL;
+    if (urgent) {
+        window->type = URGENT_WINDOW;
+    } else if (focused) {
+        window->type = FOCUSED_WINDOW;
+    } else {
+        window->type = UNFOCUSED_WINDOW;
+    }
 
     return window;
 }

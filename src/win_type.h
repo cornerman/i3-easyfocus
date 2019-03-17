@@ -1,0 +1,11 @@
+#ifndef I3_EASYFOCUS_WIN_TYPE
+#define I3_EASYFOCUS_WIN_TYPE
+
+typedef enum {
+    FOCUSED_WINDOW,
+    URGENT_WINDOW,
+    //TODO: ACTIVE_WINDOW
+    UNFOCUSED_WINDOW
+} WindowType;
+
+#endif

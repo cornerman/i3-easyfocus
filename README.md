@@ -40,6 +40,12 @@ Usage: i3-easyfocus <options>
  -k --keys <mode>       set the labeling keys to use, avy or alpha
                             - "avy" (default) prefers home row
                             - "alpha" orders alphabetically
+ --color-urgent-bg <rgb>    set label background color of urgent windows, e.g., FF00FF
+ --color-focused-bg <rgb>   set label background color of focused windows, e.g., FF00FF
+ --color-container-bg <rgb> set label background color of unfocused windows, e.g., FF00FF
+ --color-urgent-fg <rgb>    set label foreground color of urgent windows, e.g., FF00FF
+ --color-focused-fg <rgb>   set label foreground color of focused windows, e.g., FF00FF
+ --color-container-fg <rgb> set label foreground color of unfocused windows, e.g., FF00FF
 ```
 
 You can change the keybindings and the font in ```src/config.h```.

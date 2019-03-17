@@ -1,6 +1,7 @@
 #include "xcb.h"
 #include "util.h"
 #include "config.h"
+#include "color_config.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,13 @@ static xcb_screen_t *screen = NULL;
 static xcb_key_symbols_t *keysyms = NULL;
 static xcb_font_t font;
 static xcb_query_font_reply_t *font_info = NULL;
+
+static uint32_t color_urgent_bg;
+static uint32_t color_focused_bg;
+static uint32_t color_unfocused_bg;
+static uint32_t color_urgent_fg;
+static uint32_t color_focused_fg;
+static uint32_t color_unfocused_fg;
 
 static int request_failed(xcb_void_cookie_t cookie, char *err_msg)
 {
@@ -85,13 +93,12 @@ static int predict_text_width(const char *text)
     return width;
 }
 
-static int draw_text(xcb_window_t window, int16_t x, int16_t y, const char *label)
+static int draw_text(xcb_window_t window, int16_t x, int16_t y, uint32_t color_bg, uint32_t color_fg, const char *label)
 {
     xcb_gcontext_t gc = xcb_generate_id(connection);
     uint32_t mask = XCB_GC_FOREGROUND | XCB_GC_BACKGROUND | XCB_GC_FONT;
-    uint32_t value_list[3] = {screen->black_pixel,
-                              screen->white_pixel,
-                              font};
+
+    uint32_t value_list[3] = {color_fg, color_bg, font};
 
     xcb_void_cookie_t gc_cookie = xcb_create_gc_checked(connection,
                                                         gc,
@@ -125,16 +132,42 @@ static int draw_text(xcb_window_t window, int16_t x, int16_t y, const char *labe
     return 0;
 }
 
-int xcb_create_text_window(int pos_x, int pos_y, const char *label)
+static int color_by_window_type(WindowType windowType, uint32_t* color_bg, uint32_t* color_fg) {
+    switch(windowType)
+    {
+    case URGENT_WINDOW:
+        *color_bg = color_urgent_bg;
+        *color_fg = color_urgent_fg;
+        return 0;
+    case FOCUSED_WINDOW:
+        *color_bg = color_focused_bg;
+        *color_fg = color_focused_fg;
+        return 0;
+    case UNFOCUSED_WINDOW:
+        *color_bg = color_unfocused_bg;
+        *color_fg = color_unfocused_fg;
+        return 0;
+    default:
+        return 1;
+    }
+}
+
+int xcb_create_text_window(int pos_x, int pos_y, WindowType windowType, const char *label)
 {
     uint32_t mask;
     uint32_t values[2];
 
     int width = predict_text_width(label);
 
+    uint32_t color_bg, color_fg;
+    if (color_by_window_type(windowType, &color_bg, &color_fg)) {
+        LOG("cannot determine window colors\n");
+        return 1;
+    }
+
     xcb_window_t window = xcb_generate_id(connection);
     mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-    values[0] = screen->white_pixel;
+    values[0] = color_bg;
     values[1] = XCB_EVENT_MASK_EXPOSURE;
 
     LOG("create window (id: %u, x: %i, y: %i): %s\n", window, pos_x, pos_y, label);
@@ -184,7 +217,7 @@ int xcb_create_text_window(int pos_x, int pos_y, const char *label)
             case XCB_EXPOSE:
             {
                 free(event);
-                if (draw_text(window, 1, font_info->font_ascent, label))
+                if (draw_text(window, 1, font_info->font_ascent, color_bg, color_fg, label))
                 {
                     LOG("error drawing text\n");
                     return 1;
@@ -318,6 +351,51 @@ int xcb_register_configure_notify()
     return 0;
 }
 
+static xcb_alloc_color_cookie_t alloc_color(xcb_colormap_t colormap_id, Rgb rgb)
+{
+    return xcb_alloc_color(connection, colormap_id, rgb.r, rgb.g, rgb.b);
+}
+
+static int open_colors(ColorConfig cfg)
+{
+    xcb_colormap_t colormap_id = xcb_generate_id(connection);
+    xcb_void_cookie_t open_colormap = xcb_create_colormap_checked(connection, XCB_COLORMAP_ALLOC_NONE, colormap_id, screen->root, screen->root_visual);
+    if (request_failed(open_colormap, "cannot open colormap"))
+    {
+        return 1;
+    }
+
+    xcb_alloc_color_cookie_t urgent_bg_cookie = alloc_color(colormap_id, cfg.urgent_bg);
+    xcb_alloc_color_cookie_t focused_bg_cookie = alloc_color(colormap_id, cfg.focused_bg);
+    xcb_alloc_color_cookie_t unfocused_bg_cookie = alloc_color(colormap_id, cfg.unfocused_bg);
+    xcb_alloc_color_cookie_t urgent_fg_cookie = alloc_color(colormap_id, cfg.urgent_fg);
+    xcb_alloc_color_cookie_t focused_fg_cookie = alloc_color(colormap_id, cfg.focused_fg);
+    xcb_alloc_color_cookie_t unfocused_fg_cookie = alloc_color(colormap_id, cfg.unfocused_fg);
+
+    xcb_alloc_color_reply_t *urgent_bg_reply = xcb_alloc_color_reply(connection, urgent_bg_cookie, NULL);
+    xcb_alloc_color_reply_t *focused_bg_reply = xcb_alloc_color_reply(connection, focused_bg_cookie, NULL);
+    xcb_alloc_color_reply_t *unfocused_bg_reply = xcb_alloc_color_reply(connection, unfocused_bg_cookie, NULL);
+    xcb_alloc_color_reply_t *urgent_fg_reply = xcb_alloc_color_reply(connection, urgent_fg_cookie, NULL);
+    xcb_alloc_color_reply_t *focused_fg_reply = xcb_alloc_color_reply(connection, focused_fg_cookie, NULL);
+    xcb_alloc_color_reply_t *unfocused_fg_reply = xcb_alloc_color_reply(connection, unfocused_fg_cookie, NULL);
+
+    color_urgent_bg = urgent_bg_reply->pixel;
+    color_focused_bg = focused_bg_reply->pixel;
+    color_unfocused_bg = unfocused_bg_reply->pixel;
+    color_urgent_fg = urgent_fg_reply->pixel;
+    color_focused_fg = focused_fg_reply->pixel;
+    color_unfocused_fg = unfocused_fg_reply->pixel;
+
+    free(urgent_bg_reply);
+    free(focused_bg_reply);
+    free(unfocused_bg_reply);
+    free(urgent_fg_reply);
+    free(focused_fg_reply);
+    free(unfocused_fg_reply);
+
+    return 0;
+}
+
 static int open_font(const char *font_pattern)
 {
     LOG("trying to open font: %s\n", font_pattern);
@@ -342,12 +420,21 @@ static int open_font_with_fallback(const char *font_name)
     return 0;
 }
 
-int xcb_init(const char *font_name)
+int xcb_init(const char *font_name, ColorConfig color_config)
 {
     connection = xcb_connect(NULL, NULL);
     if (xcb_connection_has_error(connection))
     {
         LOG("cannot open display");
+        return 1;
+    }
+
+    screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
+    keysyms = xcb_key_symbols_alloc(connection);
+
+    if (open_colors(color_config))
+    {
+        xcb_disconnect(connection);
         return 1;
     }
 
@@ -359,9 +446,6 @@ int xcb_init(const char *font_name)
 
     xcb_query_font_cookie_t font_cookie = xcb_query_font(connection, font);
     font_info = xcb_query_font_reply(connection, font_cookie, NULL);
-
-    screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
-    keysyms = xcb_key_symbols_alloc(connection);
 
     return 0;
 }

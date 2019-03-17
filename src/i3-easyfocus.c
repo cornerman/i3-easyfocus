@@ -2,6 +2,7 @@
 #include "xcb.h"
 #include "map.h"
 #include "util.h"
+#include "color_config.h"
 #include "config.h"
 
 #include <stdlib.h>
@@ -18,6 +19,7 @@ static SearchArea search_area = CURRENT_OUTPUT;
 static SortMethod sort_method = BY_LOCATION;
 static char *font_name = XCB_DEFAULT_FONT_NAME;
 static label_key_mode_e key_mode = LABEL_KEY_MODE_DEFAULT;
+static ColorConfig color_config = { COLOR_DEFAULT_URGENT_BG, COLOR_DEFAULT_URGENT_FG, COLOR_DEFAULT_FOCUSED_BG, COLOR_DEFAULT_FOCUSED_FG, COLOR_DEFAULT_UNFOCUSED_BG, COLOR_DEFAULT_UNFOCUSED_FG };
 
 static void print_help(void)
 {
@@ -35,6 +37,12 @@ static void print_help(void)
     fprintf(stderr, " -k --keys <mode>       set the labeling keys to use, avy or alpha\n");
     fprintf(stderr, "                            - \"avy\" (default) prefers home row\n");
     fprintf(stderr, "                            - \"alpha\" orders alphabetically\n");
+    fprintf(stderr, " --color-urgent-bg <rgb>    set label background color of urgent windows, e.g., FF00FF\n");
+    fprintf(stderr, " --color-focused-bg <rgb>   set label background color of focused windows, e.g., FF00FF\n");
+    fprintf(stderr, " --color-container-bg <rgb> set label background color of unfocused windows, e.g., FF00FF\n");
+    fprintf(stderr, " --color-urgent-fg <rgb>    set label foreground color of urgent windows, e.g., FF00FF\n");
+    fprintf(stderr, " --color-focused-fg <rgb>   set label foreground color of focused windows, e.g., FF00FF\n");
+    fprintf(stderr, " --color-container-fg <rgb> set label foreground color of unfocused windows, e.g., FF00FF\n");
 }
 
 static void parse_args(int argc, char *argv[])
@@ -46,7 +54,12 @@ static void parse_args(int argc, char *argv[])
         {"current", no_argument, 0, 'c'},
         {"rapid", no_argument, 0, 'r'},
         {"font", required_argument, 0, 'f'},
-        {"sort-by", required_argument, 0, 's'},
+        {"color-urgent-bg", required_argument, 0, 1000},
+        {"color-focused-bg", required_argument, 0, 1001},
+        {"color-unfocused-bg", required_argument, 0, 1002},
+        {"color-urgent-fg", required_argument, 0, 1003},
+        {"color-focused-fg", required_argument, 0, 1004},
+        {"color-unfocused-fg", required_argument, 0, 1005},
         {"help", no_argument, 0, 'h'},
         {"keys", required_argument, 0, 'k'},
         {0, 0, 0, 0}};
@@ -110,8 +123,47 @@ static void parse_args(int argc, char *argv[])
                 break;
             }
             else
+            {
                 fprintf(stderr, "wrong type of sort method: %s\n", optarg);
-            // fallthrough
+                print_help();
+                exit(EXIT_FAILURE);
+            }
+        case 1000:
+            if (parse_rgb_string(optarg, &(color_config.urgent_bg))) {
+                fprintf(stderr, "cannot parse rgb string: %s\n", optarg);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 1001:
+            if (parse_rgb_string(optarg, &(color_config.focused_bg))) {
+                fprintf(stderr, "cannot parse rgb string: %s\n", optarg);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 1002:
+            if (parse_rgb_string(optarg, &(color_config.unfocused_bg))) {
+                fprintf(stderr, "cannot parse rgb string: %s\n", optarg);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 1003:
+            if (parse_rgb_string(optarg, &(color_config.urgent_fg))) {
+                fprintf(stderr, "cannot parse rgb string: %s\n", optarg);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 1004:
+            if (parse_rgb_string(optarg, &(color_config.focused_fg))) {
+                fprintf(stderr, "cannot parse rgb string: %s\n", optarg);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case 1005:
+            if (parse_rgb_string(optarg, &(color_config.unfocused_fg))) {
+                fprintf(stderr, "cannot parse rgb string: %s\n", optarg);
+                exit(EXIT_FAILURE);
+            }
+            break;
         default:
             print_help();
             exit(EXIT_FAILURE);
@@ -143,7 +195,7 @@ static int create_window_label(Window *win)
         return 1;
     }
 
-    if (xcb_create_text_window(win->position.x, win->position.y, label))
+    if (xcb_create_text_window(win->position.x, win->position.y, win->type, label))
     {
         fprintf(stderr, "cannot create text window\n");
         free(label);
@@ -199,7 +251,7 @@ static int handle_selection(xcb_keysym_t selection)
 
 static int setup_xcb()
 {
-    if (xcb_init(font_name))
+    if (xcb_init(font_name, color_config))
     {
         fprintf(stderr, "error initializing xcb\n");
         return 1;

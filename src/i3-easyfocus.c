@@ -39,14 +39,14 @@ static void print_help(void)
     fprintf(stderr, "                            - <num> using the workspaces' numbers\n");
     fprintf(stderr, " -f --font <font-name>  set font name, see `xlsfonts` for available fonts\n");
     fprintf(stderr, " -k --keys <mode>       set the labeling keys to use, avy or alpha\n");
-    fprintf(stderr, "                            - \"avy\" (default) prefers home row\n");
-    fprintf(stderr, "                            - \"alpha\" orders alphabetically\n");
+    fprintf(stderr, "                            - <avy> prefers home row (default)\n");
+    fprintf(stderr, "                            - <alpha> orders alphabetically\n");
     fprintf(stderr, " --color-urgent-bg <rgb>    set label background color of urgent windows, e.g., FF00FF\n");
     fprintf(stderr, " --color-focused-bg <rgb>   set label background color of focused windows, e.g., FF00FF\n");
-    fprintf(stderr, " --color-container-bg <rgb> set label background color of unfocused windows, e.g., FF00FF\n");
+    fprintf(stderr, " --color-unfocused-bg <rgb> set label background color of unfocused windows, e.g., FF00FF\n");
     fprintf(stderr, " --color-urgent-fg <rgb>    set label foreground color of urgent windows, e.g., FF00FF\n");
     fprintf(stderr, " --color-focused-fg <rgb>   set label foreground color of focused windows, e.g., FF00FF\n");
-    fprintf(stderr, " --color-container-fg <rgb> set label foreground color of unfocused windows, e.g., FF00FF\n");
+    fprintf(stderr, " --color-unfocused-fg <rgb> set label foreground color of unfocused windows, e.g., FF00FF\n");
 }
 
 static void parse_args(int argc, char *argv[])

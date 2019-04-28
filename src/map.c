@@ -9,6 +9,9 @@
 #define LENGTH_AVY (sizeof(label_avy_keysyms) / sizeof(label_avy_keysyms[0]))
 static xcb_keysym_t label_avy_keysyms[] = LABEL_KEYSYMS_AVY;
 
+#define LENGTH_COLEMAK (sizeof(label_colemak_keysyms) / sizeof(label_colemak_keysyms[0]))
+static xcb_keysym_t label_colemak_keysyms[] = LABEL_KEYSYMS_COLEMAK;
+
 #define LENGTH_ALPHA (sizeof(label_alpha_keysyms) / sizeof(label_alpha_keysyms[0]))
 static xcb_keysym_t label_alpha_keysyms[] = LABEL_KEYSYMS_ALPHA;
 
@@ -32,6 +35,9 @@ void map_init(label_key_mode_e mode)
         label_keysyms = label_alpha_keysyms;
         map_length = LENGTH_ALPHA;
         break;
+    case LABEL_KEY_MODE_COLEMAK:
+        label_keysyms = label_colemak_keysyms;
+        map_length = LENGTH_COLEMAK;
     }
     win_map = calloc(map_length, sizeof(Window*));
 }

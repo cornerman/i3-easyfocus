@@ -40,8 +40,9 @@ Usage: i3-easyfocus <options>
                             - <location> based on their location (default)
                             - <num> using the workspaces' numbers
  -f --font <font-name>  set font name, see `xlsfonts` for available fonts
- -k --keys <mode>       set the labeling keys to use, avy or alpha
-                            - <avy> prefers home row (default)
+ -k --keys <mode>       set the labeling keys to use:
+                            - <avy> prefers home row for qwerty (default)
+                            - <colemak> prefers home row for colemak
                             - <alpha> orders alphabetically
  --color-urgent-bg <rgb>    set label background color of urgent windows, e.g., FF00FF
  --color-focused-bg <rgb>   set label background color of focused windows, e.g., FF00FF

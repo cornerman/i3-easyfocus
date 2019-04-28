@@ -38,8 +38,9 @@ static void print_help(void)
     fprintf(stderr, "                            - <location> based on their location (default)\n");
     fprintf(stderr, "                            - <num> using the workspaces' numbers\n");
     fprintf(stderr, " -f --font <font-name>  set font name, see `xlsfonts` for available fonts\n");
-    fprintf(stderr, " -k --keys <mode>       set the labeling keys to use, avy or alpha\n");
-    fprintf(stderr, "                            - <avy> prefers home row (default)\n");
+    fprintf(stderr, " -k --keys <mode>       set the labeling keys to use:\n");
+    fprintf(stderr, "                            - <avy> prefers home row for qwerty (default)\n");
+    fprintf(stderr, "                            - <colemak> prefers home row for colemak\n");
     fprintf(stderr, "                            - <alpha> orders alphabetically\n");
     fprintf(stderr, " --color-urgent-bg <rgb>    set label background color of urgent windows, e.g., FF00FF\n");
     fprintf(stderr, " --color-focused-bg <rgb>   set label background color of focused windows, e.g., FF00FF\n");
@@ -110,6 +111,10 @@ static void parse_args(int argc, char *argv[])
             else if (strcmp(optarg, "alpha") == 0)
             {
                 key_mode = LABEL_KEY_MODE_ALPHA;
+            }
+            else if (strcmp(optarg, "colemak") == 0)
+            {
+                key_mode = LABEL_KEY_MODE_COLEMAK;
             }
             else
             {

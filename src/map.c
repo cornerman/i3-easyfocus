@@ -38,6 +38,7 @@ void map_init(label_key_mode_e mode)
     case LABEL_KEY_MODE_COLEMAK:
         label_keysyms = label_colemak_keysyms;
         map_length = LENGTH_COLEMAK;
+        break;
     }
     win_map = calloc(map_length, sizeof(Window*));
 }

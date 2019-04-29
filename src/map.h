@@ -8,6 +8,7 @@ typedef enum
 {
     LABEL_KEY_MODE_AVY,
     LABEL_KEY_MODE_ALPHA,
+    LABEL_KEY_MODE_COLEMAK,
 
     LABEL_KEY_MODE_DEFAULT = LABEL_KEY_MODE_AVY,
 } label_key_mode_e;
